@@ -15,6 +15,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable nightly
+          rustup component add --toolchain stable clippy
+          rustup component add --toolchain nightly rustfmt
+          rustup default stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+
       - name: Run fmt
         if: always()
         run: make fmt-check
