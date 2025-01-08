@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run fmt
+        if: always()
+        run: make fmt-check
+
+      - name: Run clippy
+        if: always()
+        run: make lint
+
+      - name: Run tests
+        if: always()
+        run: make test
