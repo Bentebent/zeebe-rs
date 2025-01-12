@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 prost = "0.13.4"
-tonic = "0.12.3"
+thiserror = "2.0.11"
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+tonic = { version = "0.12.3", features = ["tls"] }
 
 [build-dependencies]
 tonic-build = "*"
