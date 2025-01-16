@@ -25,7 +25,7 @@ impl TopologyRequest {
 pub struct TopologyResponse {}
 
 impl From<proto::TopologyResponse> for TopologyResponse {
-    fn from(response: proto::TopologyResponse) -> Self {
+    fn from(_response: proto::TopologyResponse) -> Self {
         TopologyResponse {}
     }
 }
