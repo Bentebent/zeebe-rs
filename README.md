@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml)
 
-A Rust client and worker implementation for interacting with [Zeebe](https://camunda.com/platform/zeebe/).
+A Rust client and worker implementation for interacting with [Zeebe](https://camunda.com/platform/zeebe/) built using [Tonic](https://github.com/hyperium/tonic) and [Tokio](https://github.com/tokio-rs/tokio).
 
 ## Usage
 
@@ -16,8 +16,6 @@ Built using:
 
 ## TODO
 
-- [ ] Zeebe client
-- [ ] OAuth authentication
 - [ ] Topology requests
 - [ ] Process requests
 - [ ] Zeebe worker
