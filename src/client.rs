@@ -31,9 +31,6 @@ pub enum ClientBuilderError {
 #[derive(Default)]
 pub struct Empty;
 pub struct WithAddress;
-pub struct Secure;
-pub struct OAuth;
-pub struct Buildable;
 
 pub trait ClientBuilderState {}
 impl ClientBuilderState for Empty {}
