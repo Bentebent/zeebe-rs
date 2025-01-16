@@ -5,8 +5,10 @@ pub(crate) mod proto {
 
 pub(crate) mod client;
 pub(crate) mod oauth;
+pub(crate) mod topology;
 
 pub use client::{Client, ClientBuilder, ClientBuilderError};
+pub use topology::{TopologyRequest, TopologyResponse};
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
