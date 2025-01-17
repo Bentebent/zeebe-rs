@@ -8,10 +8,17 @@ use tonic::{
 use thiserror::Error;
 
 use crate::{
+    deploy_resource::DeployResource,
     oauth::{OAuthConfig, OAuthInterceptor},
     proto::gateway_client::GatewayClient,
     topology::TopologyRequest,
 };
+
+#[derive(Error, Debug)]
+pub enum ClientError {
+    #[error(transparent)]
+    RequestFailed(#[from] tonic::Status),
+}
 
 #[derive(Error, Debug)]
 pub enum ClientBuilderError {
@@ -178,5 +185,9 @@ impl Client {
 
     pub fn request_topology(&self) -> TopologyRequest {
         TopologyRequest::new(self.clone())
+    }
+
+    pub fn deploy_resource(&self) -> DeployResource<crate::deploy_resource::Empty> {
+        DeployResource::<crate::deploy_resource::Empty>::new(self.clone())
     }
 }
