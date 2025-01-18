@@ -1,4 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct HelloWorld {
+    hello: String,
+}
 
 //ZEEBE_AUTHENTICATION_MODE=identity docker compose up -d
 //URL: http://localhost:26500
@@ -33,5 +39,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     println!("{:?}", result);
+
+    let result = client
+        .create_process_instance()
+        .with_bpmn_process_id(String::from("Process_0wspz1k"))
+        .with_input(HelloWorld {
+            hello: String::from("world"),
+        })
+        .with_result(None)
+        .send_with_result::<HelloWorld>()
+        .await?;
+
+    println!("{:?}", result);
+
     Ok(())
 }

@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let _ = client.auth_initialized().await;
-    let topology = client.request_topology().send().await;
+    let topology = client.topology().send().await;
     println!("{:?}", topology);
 
     Ok(())

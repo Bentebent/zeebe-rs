@@ -1,8 +1,7 @@
 use crate::proto;
+use crate::{Client, ClientError};
 use std::path::PathBuf;
 use thiserror::Error;
-
-use crate::{Client, ClientError};
 
 #[derive(Error, Debug)]
 pub enum DeployResourceError {
@@ -28,7 +27,7 @@ impl DeployResourceState for WithFile {}
 impl DeployResourceState for WithDefinition {}
 
 #[derive(Debug)]
-pub struct DeployResource<T: DeployResourceState> {
+pub struct DeployResourceRequest<T: DeployResourceState> {
     client: Client,
     resource_file_paths: Option<Vec<PathBuf>>,
     resource_definitions: Vec<(String, Vec<u8>)>,
@@ -36,9 +35,9 @@ pub struct DeployResource<T: DeployResourceState> {
     _state: std::marker::PhantomData<T>,
 }
 
-impl<T: DeployResourceState> DeployResource<T> {
-    pub fn new(client: Client) -> DeployResource<Empty> {
-        DeployResource {
+impl<T: DeployResourceState> DeployResourceRequest<T> {
+    pub fn new(client: Client) -> DeployResourceRequest<Empty> {
+        DeployResourceRequest {
             client,
             resource_file_paths: None,
             resource_definitions: vec![],
@@ -46,8 +45,8 @@ impl<T: DeployResourceState> DeployResource<T> {
             _state: std::marker::PhantomData,
         }
     }
-    fn transition<NewState: DeployResourceState>(self) -> DeployResource<NewState> {
-        DeployResource {
+    fn transition<NewState: DeployResourceState>(self) -> DeployResourceRequest<NewState> {
+        DeployResourceRequest {
             client: self.client,
             resource_file_paths: self.resource_file_paths,
             resource_definitions: self.resource_definitions,
@@ -57,13 +56,16 @@ impl<T: DeployResourceState> DeployResource<T> {
     }
 }
 
-impl DeployResource<Empty> {
-    pub fn with_resource_file(mut self, file_path: PathBuf) -> DeployResource<WithFile> {
+impl DeployResourceRequest<Empty> {
+    pub fn with_resource_file(mut self, file_path: PathBuf) -> DeployResourceRequest<WithFile> {
         self.resource_file_paths = Some(vec![file_path]);
         self.transition()
     }
 
-    pub fn with_resource_files(mut self, file_paths: Vec<PathBuf>) -> DeployResource<WithFile> {
+    pub fn with_resource_files(
+        mut self,
+        file_paths: Vec<PathBuf>,
+    ) -> DeployResourceRequest<WithFile> {
         self.resource_file_paths = Some(file_paths);
         self.transition()
     }
@@ -72,7 +74,7 @@ impl DeployResource<Empty> {
         mut self,
         name: String,
         definition: Vec<u8>,
-    ) -> DeployResource<WithDefinition> {
+    ) -> DeployResourceRequest<WithDefinition> {
         self.resource_definitions.push((name, definition));
         self.transition()
     }
@@ -80,16 +82,16 @@ impl DeployResource<Empty> {
     pub fn with_definitions(
         mut self,
         mut definitions: Vec<(String, Vec<u8>)>,
-    ) -> DeployResource<WithDefinition> {
+    ) -> DeployResourceRequest<WithDefinition> {
         self.resource_definitions.append(&mut definitions);
         self.transition()
     }
 }
 
-impl DeployResource<WithFile> {
+impl DeployResourceRequest<WithFile> {
     pub fn read_resource_files(
         mut self,
-    ) -> Result<DeployResource<WithDefinition>, DeployResourceError> {
+    ) -> Result<DeployResourceRequest<WithDefinition>, DeployResourceError> {
         if let Some(resource_files) = self.resource_file_paths.take() {
             let contents: Result<Vec<(String, Vec<u8>)>, DeployResourceError> = resource_files
                 .into_iter()
@@ -116,8 +118,8 @@ impl DeployResource<WithFile> {
     }
 }
 
-impl DeployResource<WithDefinition> {
-    pub fn with_tenant(mut self, tenant_id: String) -> DeployResource<WithDefinition> {
+impl DeployResourceRequest<WithDefinition> {
+    pub fn with_tenant(mut self, tenant_id: String) -> DeployResourceRequest<WithDefinition> {
         self.tenant_id = Some(tenant_id);
         self
     }

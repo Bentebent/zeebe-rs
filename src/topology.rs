@@ -1,4 +1,5 @@
 use crate::{client::Client, proto, ClientError};
+
 #[derive(Debug)]
 pub struct TopologyRequest(Client);
 

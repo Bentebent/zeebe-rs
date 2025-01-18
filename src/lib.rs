@@ -6,10 +6,11 @@ pub(crate) mod proto {
 pub(crate) mod client;
 pub(crate) mod deploy_resource;
 pub(crate) mod oauth;
+pub(crate) mod process_instance;
 pub(crate) mod topology;
 
 pub use client::{Client, ClientBuilder, ClientBuilderError, ClientError};
-pub use deploy_resource::DeployResource;
+pub use deploy_resource::DeployResourceRequest;
 pub use topology::{TopologyRequest, TopologyResponse};
 
 pub fn add(left: u64, right: u64) -> u64 {

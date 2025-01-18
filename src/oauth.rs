@@ -1,9 +1,8 @@
+use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, SystemTime},
 };
-
-use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
 use thiserror::Error;
 use tokio::{
     sync::Notify,

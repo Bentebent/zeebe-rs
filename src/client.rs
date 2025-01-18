@@ -1,23 +1,24 @@
+use crate::{
+    deploy_resource::DeployResourceRequest,
+    oauth::{OAuthConfig, OAuthInterceptor},
+    process_instance::{CreateProcessInstanceRequest, ProcessInstanceError},
+    proto::gateway_client::GatewayClient,
+    topology::TopologyRequest,
+};
 use std::{path::Path, time::Duration};
-
+use thiserror::Error;
 use tonic::{
     codegen::InterceptedService,
     transport::{Certificate, Channel, ClientTlsConfig},
-};
-
-use thiserror::Error;
-
-use crate::{
-    deploy_resource::DeployResource,
-    oauth::{OAuthConfig, OAuthInterceptor},
-    proto::gateway_client::GatewayClient,
-    topology::TopologyRequest,
 };
 
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error(transparent)]
     RequestFailed(#[from] tonic::Status),
+
+    #[error(transparent)]
+    InstanceError(#[from] ProcessInstanceError),
 }
 
 #[derive(Error, Debug)]
@@ -183,11 +184,17 @@ impl Client {
         self.auth_interceptor.auth_initialized().await;
     }
 
-    pub fn request_topology(&self) -> TopologyRequest {
+    pub fn topology(&self) -> TopologyRequest {
         TopologyRequest::new(self.clone())
     }
 
-    pub fn deploy_resource(&self) -> DeployResource<crate::deploy_resource::Empty> {
-        DeployResource::<crate::deploy_resource::Empty>::new(self.clone())
+    pub fn deploy_resource(&self) -> DeployResourceRequest<crate::deploy_resource::Empty> {
+        DeployResourceRequest::<crate::deploy_resource::Empty>::new(self.clone())
+    }
+
+    pub fn create_process_instance(
+        &self,
+    ) -> CreateProcessInstanceRequest<crate::process_instance::Empty> {
+        CreateProcessInstanceRequest::<crate::process_instance::Empty>::new(self.clone())
     }
 }
