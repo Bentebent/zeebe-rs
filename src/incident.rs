@@ -15,7 +15,7 @@ pub struct ResolveIncidentRequest<T: ResolveIncidentRequestState> {
 }
 
 impl<T: ResolveIncidentRequestState> ResolveIncidentRequest<T> {
-    pub fn new(client: Client) -> ResolveIncidentRequest<Initial> {
+    pub(crate) fn new(client: Client) -> ResolveIncidentRequest<Initial> {
         ResolveIncidentRequest {
             client,
             incident_key: 0,

@@ -27,7 +27,7 @@ pub struct FailJobRequest<T: FailJobRequestState> {
 }
 
 impl<T: FailJobRequestState> FailJobRequest<T> {
-    pub fn new(client: Client) -> FailJobRequest<Initial> {
+    pub(crate) fn new(client: Client) -> FailJobRequest<Initial> {
         FailJobRequest {
             client,
             job_key: 0,

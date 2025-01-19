@@ -256,7 +256,7 @@ pub struct CompleteJobRequest<T: CompleteJobRequestState> {
 }
 
 impl<T: CompleteJobRequestState> CompleteJobRequest<T> {
-    pub fn new(client: Client) -> CompleteJobRequest<Initial> {
+    pub(crate) fn new(client: Client) -> CompleteJobRequest<Initial> {
         CompleteJobRequest {
             client,
             job_key: 0,

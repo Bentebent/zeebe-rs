@@ -41,7 +41,7 @@ pub struct CreateProcessInstanceRequest<T: CreateProcessInstanceState> {
 }
 
 impl<T: CreateProcessInstanceState> CreateProcessInstanceRequest<T> {
-    pub fn new(client: Client) -> CreateProcessInstanceRequest<Initial> {
+    pub(crate) fn new(client: Client) -> CreateProcessInstanceRequest<Initial> {
         CreateProcessInstanceRequest {
             client,
             process_definition_key: None,

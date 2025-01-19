@@ -27,7 +27,7 @@ pub struct ThrowErrorRequest<T: ThrowErrorRequestState> {
 }
 
 impl<T: ThrowErrorRequestState> ThrowErrorRequest<T> {
-    pub fn new(client: Client) -> ThrowErrorRequest<Initial> {
+    pub(crate) fn new(client: Client) -> ThrowErrorRequest<Initial> {
         ThrowErrorRequest {
             client,
             job_key: 0,

@@ -28,7 +28,7 @@ pub struct SetVariablesRequest<T: SetVariablesRequestState> {
 }
 
 impl<T: SetVariablesRequestState> SetVariablesRequest<T> {
-    pub fn new(client: Client) -> SetVariablesRequest<Initial> {
+    pub(crate) fn new(client: Client) -> SetVariablesRequest<Initial> {
         SetVariablesRequest {
             client,
             element_instance_key: 0,

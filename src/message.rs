@@ -29,7 +29,7 @@ pub struct PublishMessageRequest<T: PublishMessageRequestState> {
 }
 
 impl<T: PublishMessageRequestState> PublishMessageRequest<T> {
-    pub fn new(client: Client) -> PublishMessageRequest<Initial> {
+    pub(crate) fn new(client: Client) -> PublishMessageRequest<Initial> {
         PublishMessageRequest {
             client,
             name: String::new(),

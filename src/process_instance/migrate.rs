@@ -37,7 +37,7 @@ pub struct MigrateProcessInstanceRequest<T: MigrateProcessInstanceState> {
 }
 
 impl<T: MigrateProcessInstanceState> MigrateProcessInstanceRequest<T> {
-    pub fn new(client: Client) -> MigrateProcessInstanceRequest<Initial> {
+    pub(crate) fn new(client: Client) -> MigrateProcessInstanceRequest<Initial> {
         MigrateProcessInstanceRequest {
             client,
             process_instance_key: 0,

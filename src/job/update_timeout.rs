@@ -18,7 +18,7 @@ pub struct UpdateJobTimeoutRequest<T: UpdateJobTimeoutRequestState> {
 }
 
 impl<T: UpdateJobTimeoutRequestState> UpdateJobTimeoutRequest<T> {
-    pub fn new(client: Client) -> UpdateJobTimeoutRequest<Initial> {
+    pub(crate) fn new(client: Client) -> UpdateJobTimeoutRequest<Initial> {
         UpdateJobTimeoutRequest {
             client,
             job_key: 0,

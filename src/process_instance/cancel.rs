@@ -21,7 +21,7 @@ pub struct CancelProcessInstanceRequest<T: CancelProcessInstanceState> {
 }
 
 impl<T: CancelProcessInstanceState> CancelProcessInstanceRequest<T> {
-    pub fn new(client: Client) -> CancelProcessInstanceRequest<Initial> {
+    pub(crate) fn new(client: Client) -> CancelProcessInstanceRequest<Initial> {
         CancelProcessInstanceRequest {
             client,
             process_instance_key: 0,

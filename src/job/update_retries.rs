@@ -18,7 +18,7 @@ pub struct UpdateJobRetriesRequest<T: UpdateJobRetriesRequestState> {
 }
 
 impl<T: UpdateJobRetriesRequestState> UpdateJobRetriesRequest<T> {
-    pub fn new(client: Client) -> UpdateJobRetriesRequest<Initial> {
+    pub(crate) fn new(client: Client) -> UpdateJobRetriesRequest<Initial> {
         UpdateJobRetriesRequest {
             client,
             job_key: 0,

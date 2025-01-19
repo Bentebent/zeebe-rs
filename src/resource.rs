@@ -421,7 +421,7 @@ impl DeleteResourceRequestState for Initial {}
 impl DeleteResourceRequestState for WithKey {}
 
 impl<T: DeleteResourceRequestState> DeleteResourceRequest<T> {
-    pub fn new(client: Client) -> DeleteResourceRequest<Initial> {
+    pub(crate) fn new(client: Client) -> DeleteResourceRequest<Initial> {
         DeleteResourceRequest {
             client,
             resource_key: 0,

@@ -27,7 +27,7 @@ pub struct EvaluateDecisionRequest<T: EvaluateDecisionRequestState> {
 }
 
 impl<T: EvaluateDecisionRequestState> EvaluateDecisionRequest<T> {
-    pub fn new(client: Client) -> EvaluateDecisionRequest<Initial> {
+    pub(crate) fn new(client: Client) -> EvaluateDecisionRequest<Initial> {
         EvaluateDecisionRequest {
             client,
             decision_key: 0,

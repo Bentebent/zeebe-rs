@@ -24,7 +24,7 @@ pub struct BroadcastSignalRequest<T: BroadcastSignalRequestState> {
 }
 
 impl<T: BroadcastSignalRequestState> BroadcastSignalRequest<T> {
-    pub fn new(client: Client) -> BroadcastSignalRequest<Initial> {
+    pub(crate) fn new(client: Client) -> BroadcastSignalRequest<Initial> {
         BroadcastSignalRequest {
             client,
             signal_name: String::new(),

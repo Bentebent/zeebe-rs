@@ -89,7 +89,7 @@ pub struct ModifyProcessInstanceRequest<T: ModifyProcessInstanceState> {
 }
 
 impl<T: ModifyProcessInstanceState> ModifyProcessInstanceRequest<T> {
-    pub fn new(client: Client) -> ModifyProcessInstanceRequest<Initial> {
+    pub(crate) fn new(client: Client) -> ModifyProcessInstanceRequest<Initial> {
         ModifyProcessInstanceRequest {
             client,
             process_instance_key: 0,

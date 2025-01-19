@@ -17,18 +17,30 @@ pub(crate) mod throw_error;
 pub(crate) mod topology;
 
 pub use client::{Client, ClientBuilder, ClientBuilderError, ClientError};
-
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use decision::{
+    EvaluateDecisionError, EvaluateDecisionRequest, EvaluateDecisionResponse, EvaluatedDecision,
+    EvaluatedDecisionInput, EvaluatedDecisionOutput,
+};
+pub use incident::{ResolveIncidentRequest, ResolveIncidentResponse};
+pub use job::{
+    complete::{CompleteJobError, CompleteJobRequest, CompleteJobResponse},
+    fail::{FailJobError, FailJobRequest, FailJobResponse},
+    update_retries::{UpdateJobRetriesRequest, UpdateJobRetriesResponse},
+    update_timeout::{UpdateJobTimeoutRequest, UpdateJobTimeoutResponse},
+};
+pub use process_instance::{
+    cancel::{CancelProcessInstanceRequest, CancelProcessInstanceResponse},
+    create::{
+        CreateProcessInstanceRequest, CreateProcessInstanceResponse,
+        CreateProcessInstanceWithResult, CreateProcessInstanceWithResultSerialized,
+    },
+    migrate::{
+        MappingInstruction, MigrateProcessInstanceRequest, MigrateProcessInstanceResponse,
+        MigrationPlan,
+    },
+    modify::{ModifyProcessInstanceRequest, ModifyProcessInstanceResponse},
+};
+pub use set_variables::{SetVariablesError, SetVariablesRequest, SetVariablesResponse};
+pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse};
+pub use throw_error::{ThrowErrorError, ThrowErrorRequest, ThrowErrorResponse};
+pub use topology::{TopologyRequest, TopologyResponse};
