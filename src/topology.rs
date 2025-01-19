@@ -4,7 +4,7 @@ use crate::{client::Client, proto, ClientError};
 pub struct TopologyRequest(Client);
 
 impl TopologyRequest {
-    pub fn new(client: Client) -> Self {
+    pub(crate) fn new(client: Client) -> Self {
         TopologyRequest(client)
     }
 

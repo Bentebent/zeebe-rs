@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_bpmn_process_id(String::from("Process_0wspz1k"))
         .with_input(HelloWorld {
             hello: String::from("world"),
-        })
+        })?
         .with_result(None)
         .send_with_result::<HelloWorld>()
         .await?;

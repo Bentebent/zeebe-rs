@@ -1,8 +1,22 @@
 use crate::{
-    deploy_resource::DeployResourceRequest,
+    decision::{EvaluateDecisionError, EvaluateDecisionRequest},
+    incident::ResolveIncidentRequest,
+    job::{
+        complete::CompleteJobRequest, fail::FailJobRequest,
+        update_retries::UpdateJobRetriesRequest, update_timeout::UpdateJobTimeoutRequest,
+    },
+    message::PublishMessageRequest,
     oauth::{OAuthConfig, OAuthInterceptor},
-    process_instance::{CreateProcessInstanceRequest, ProcessInstanceError},
+    process_instance::{
+        cancel::CancelProcessInstanceRequest, create::CreateProcessInstanceRequest,
+        migrate::MigrateProcessInstanceRequest, modify::ModifyProcessInstanceRequest,
+        ProcessInstanceError,
+    },
     proto::gateway_client::GatewayClient,
+    resource::{DeleteResourceRequest, DeployResourceRequest},
+    set_variables::SetVariablesRequest,
+    signal::BroadcastSignalRequest,
+    throw_error::ThrowErrorRequest,
     topology::TopologyRequest,
 };
 use std::{path::Path, time::Duration};
@@ -19,6 +33,9 @@ pub enum ClientError {
 
     #[error(transparent)]
     InstanceError(#[from] ProcessInstanceError),
+
+    #[error(transparent)]
+    DecisionError(#[from] EvaluateDecisionError),
 }
 
 #[derive(Error, Debug)]
@@ -37,11 +54,11 @@ pub enum ClientBuilderError {
 }
 
 #[derive(Default)]
-pub struct Empty;
+pub struct Initial;
 pub struct WithAddress;
 
 pub trait ClientBuilderState {}
-impl ClientBuilderState for Empty {}
+impl ClientBuilderState for Initial {}
 impl ClientBuilderState for WithAddress {}
 
 #[derive(Debug)]
@@ -93,7 +110,7 @@ impl<S: ClientBuilderState> ClientBuilder<S> {
     }
 }
 
-impl ClientBuilder<Empty> {
+impl ClientBuilder<Initial> {
     fn set_endpoint(&mut self, zeebe_address: &str, port: u16) {
         self.endpoint = Some(format!("{}:{}", zeebe_address, port));
     }
@@ -176,7 +193,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn builder() -> ClientBuilder<Empty> {
+    pub fn builder() -> ClientBuilder<Initial> {
         ClientBuilder::default()
     }
 
@@ -188,13 +205,81 @@ impl Client {
         TopologyRequest::new(self.clone())
     }
 
-    pub fn deploy_resource(&self) -> DeployResourceRequest<crate::deploy_resource::Empty> {
-        DeployResourceRequest::<crate::deploy_resource::Empty>::new(self.clone())
+    pub fn deploy_resource(&self) -> DeployResourceRequest<crate::resource::Initial> {
+        DeployResourceRequest::<crate::resource::Initial>::new(self.clone())
+    }
+
+    pub fn delete_resource(&self) -> DeleteResourceRequest<crate::resource::Initial> {
+        DeleteResourceRequest::<crate::resource::Initial>::new(self.clone())
     }
 
     pub fn create_process_instance(
         &self,
-    ) -> CreateProcessInstanceRequest<crate::process_instance::Empty> {
-        CreateProcessInstanceRequest::<crate::process_instance::Empty>::new(self.clone())
+    ) -> CreateProcessInstanceRequest<crate::process_instance::create::Initial> {
+        CreateProcessInstanceRequest::<crate::process_instance::create::Initial>::new(self.clone())
+    }
+
+    pub fn cancel_process_instance(
+        &self,
+    ) -> CancelProcessInstanceRequest<crate::process_instance::cancel::Initial> {
+        CancelProcessInstanceRequest::<crate::process_instance::cancel::Initial>::new(self.clone())
+    }
+
+    pub fn migrate_process_instance(
+        &self,
+    ) -> MigrateProcessInstanceRequest<crate::process_instance::migrate::Initial> {
+        MigrateProcessInstanceRequest::<crate::process_instance::migrate::Initial>::new(
+            self.clone(),
+        )
+    }
+
+    pub fn modify_process_instance(
+        &self,
+    ) -> ModifyProcessInstanceRequest<crate::process_instance::modify::Initial> {
+        ModifyProcessInstanceRequest::<crate::process_instance::modify::Initial>::new(self.clone())
+    }
+
+    pub fn set_variables(&self) -> SetVariablesRequest<crate::set_variables::Initial> {
+        SetVariablesRequest::<crate::set_variables::Initial>::new(self.clone())
+    }
+
+    pub fn publish_message(&self) -> PublishMessageRequest<crate::message::Initial> {
+        PublishMessageRequest::<crate::message::Initial>::new(self.clone())
+    }
+
+    pub fn broadcast_signal(&self) -> BroadcastSignalRequest<crate::signal::Initial> {
+        BroadcastSignalRequest::<crate::signal::Initial>::new(self.clone())
+    }
+
+    pub fn resolve_incident(&self) -> ResolveIncidentRequest<crate::incident::Initial> {
+        ResolveIncidentRequest::<crate::incident::Initial>::new(self.clone())
+    }
+
+    pub fn throw_error(&self) -> ThrowErrorRequest<crate::throw_error::Initial> {
+        ThrowErrorRequest::<crate::throw_error::Initial>::new(self.clone())
+    }
+
+    pub fn evaluate_decision(&self) -> EvaluateDecisionRequest<crate::decision::Initial> {
+        EvaluateDecisionRequest::<crate::decision::Initial>::new(self.clone())
+    }
+
+    pub fn complete_job(&self) -> CompleteJobRequest<crate::job::complete::Initial> {
+        CompleteJobRequest::<crate::job::complete::Initial>::new(self.clone())
+    }
+
+    pub fn fail_job(&self) -> FailJobRequest<crate::job::fail::Initial> {
+        FailJobRequest::<crate::job::fail::Initial>::new(self.clone())
+    }
+
+    pub fn update_job_timeout(
+        &self,
+    ) -> UpdateJobTimeoutRequest<crate::job::update_timeout::Initial> {
+        UpdateJobTimeoutRequest::<crate::job::update_timeout::Initial>::new(self.clone())
+    }
+
+    pub fn update_job_retries(
+        &self,
+    ) -> UpdateJobRetriesRequest<crate::job::update_retries::Initial> {
+        UpdateJobRetriesRequest::<crate::job::update_retries::Initial>::new(self.clone())
     }
 }

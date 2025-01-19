@@ -16,13 +16,14 @@ pub enum DeployResourceError {
 }
 
 #[derive(Default)]
-pub struct Empty;
+pub struct Initial;
 
 pub struct WithFile;
 pub struct WithDefinition;
+pub struct WithKey;
 
 pub trait DeployResourceState {}
-impl DeployResourceState for Empty {}
+impl DeployResourceState for Initial {}
 impl DeployResourceState for WithFile {}
 impl DeployResourceState for WithDefinition {}
 
@@ -36,7 +37,7 @@ pub struct DeployResourceRequest<T: DeployResourceState> {
 }
 
 impl<T: DeployResourceState> DeployResourceRequest<T> {
-    pub fn new(client: Client) -> DeployResourceRequest<Empty> {
+    pub fn new(client: Client) -> DeployResourceRequest<Initial> {
         DeployResourceRequest {
             client,
             resource_file_paths: None,
@@ -56,7 +57,7 @@ impl<T: DeployResourceState> DeployResourceRequest<T> {
     }
 }
 
-impl DeployResourceRequest<Empty> {
+impl DeployResourceRequest<Initial> {
     pub fn with_resource_file(mut self, file_path: PathBuf) -> DeployResourceRequest<WithFile> {
         self.resource_file_paths = Some(vec![file_path]);
         self.transition()
@@ -404,5 +405,73 @@ impl From<proto::DeployResourceResponse> for DeployResourceResponse {
             deployments: value.deployments.into_iter().map(|d| d.into()).collect(),
             tenant_id: value.tenant_id,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DeleteResourceRequest<T> {
+    client: Client,
+    resource_key: i64,
+    operation_reference: Option<u64>,
+    _state: std::marker::PhantomData<T>,
+}
+
+pub trait DeleteResourceRequestState {}
+impl DeleteResourceRequestState for Initial {}
+impl DeleteResourceRequestState for WithKey {}
+
+impl<T: DeleteResourceRequestState> DeleteResourceRequest<T> {
+    pub fn new(client: Client) -> DeleteResourceRequest<Initial> {
+        DeleteResourceRequest {
+            client,
+            resource_key: 0,
+            operation_reference: None,
+            _state: std::marker::PhantomData,
+        }
+    }
+
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
+    }
+
+    fn transition<NewState: DeleteResourceRequestState>(self) -> DeleteResourceRequest<NewState> {
+        DeleteResourceRequest {
+            client: self.client,
+            resource_key: self.resource_key,
+            operation_reference: self.operation_reference,
+            _state: std::marker::PhantomData,
+        }
+    }
+}
+
+impl DeleteResourceRequest<Initial> {
+    pub fn with_resource_key(mut self, resource_key: i64) -> DeleteResourceRequest<WithKey> {
+        self.resource_key = resource_key;
+        self.transition()
+    }
+}
+
+impl DeleteResourceRequest<WithKey> {
+    pub async fn send(mut self) -> Result<DeleteResourceResponse, ClientError> {
+        let res = self
+            .client
+            .gateway_client
+            .delete_resource(proto::DeleteResourceRequest {
+                resource_key: self.resource_key,
+                operation_reference: self.operation_reference,
+            })
+            .await?;
+
+        Ok(res.into_inner().into())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DeleteResourceResponse {}
+
+impl From<proto::DeleteResourceResponse> for DeleteResourceResponse {
+    fn from(_value: proto::DeleteResourceResponse) -> DeleteResourceResponse {
+        DeleteResourceResponse {}
     }
 }
