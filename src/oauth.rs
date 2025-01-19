@@ -204,7 +204,7 @@ impl Interceptor for OAuthInterceptor {
                 Ok(token) => token,
                 Err(err) => {
                     return Err(tonic::Status::unauthenticated(format!(
-                        "{}{}",
+                        "{}: {}",
                         "failed to get token", err
                     )));
                 }

@@ -109,14 +109,7 @@ impl CreateProcessInstanceRequest<Initial> {
 }
 
 impl CreateProcessInstanceRequest<WithProcess> {
-    pub fn with_json<T: Serialize>(
-        mut self,
-        data: T,
-    ) -> Result<CreateProcessInstanceRequest<WithVariables>, ProcessInstanceError> {
-        self.input = Some(serde_json::to_value(data)?);
-        Ok(self.transition())
-    }
-    pub fn with_input<T: Serialize>(
+    pub fn with_variables<T: Serialize>(
         mut self,
         variables: T,
     ) -> Result<CreateProcessInstanceRequest<WithVariables>, ProcessInstanceError> {

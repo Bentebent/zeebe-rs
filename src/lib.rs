@@ -23,11 +23,15 @@ pub use decision::{
 };
 pub use incident::{ResolveIncidentRequest, ResolveIncidentResponse};
 pub use job::{
-    complete::{CompleteJobError, CompleteJobRequest, CompleteJobResponse},
+    complete::{
+        CompleteJobError, CompleteJobRequest, CompleteJobResponse, JobResult, JobResultBuilder,
+        JobResultCorrections,
+    },
     fail::{FailJobError, FailJobRequest, FailJobResponse},
     update_retries::{UpdateJobRetriesRequest, UpdateJobRetriesResponse},
     update_timeout::{UpdateJobTimeoutRequest, UpdateJobTimeoutResponse},
 };
+pub use oauth::OAuthError;
 pub use process_instance::{
     cancel::{CancelProcessInstanceRequest, CancelProcessInstanceResponse},
     create::{
@@ -41,6 +45,6 @@ pub use process_instance::{
     modify::{ModifyProcessInstanceRequest, ModifyProcessInstanceResponse},
 };
 pub use set_variables::{SetVariablesError, SetVariablesRequest, SetVariablesResponse};
-pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse};
+pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse, SignalError};
 pub use throw_error::{ThrowErrorError, ThrowErrorRequest, ThrowErrorResponse};
 pub use topology::{TopologyRequest, TopologyResponse};

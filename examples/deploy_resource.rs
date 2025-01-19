@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = client
         .create_process_instance()
         .with_bpmn_process_id(String::from("Process_0wspz1k"))
-        .with_input(HelloWorld {
+        .with_variables(HelloWorld {
             hello: String::from("world"),
         })?
         .with_result(None)
