@@ -18,16 +18,15 @@ pub(crate) mod topology;
 
 pub use client::{Client, ClientBuilder, ClientBuilderError, ClientError};
 pub use decision::{
-    EvaluateDecisionError, EvaluateDecisionRequest, EvaluateDecisionResponse, EvaluatedDecision,
-    EvaluatedDecisionInput, EvaluatedDecisionOutput,
+    EvaluateDecisionRequest, EvaluateDecisionResponse, EvaluatedDecision, EvaluatedDecisionInput,
+    EvaluatedDecisionOutput,
 };
 pub use incident::{ResolveIncidentRequest, ResolveIncidentResponse};
 pub use job::{
     complete::{
-        CompleteJobError, CompleteJobRequest, CompleteJobResponse, JobResult, JobResultBuilder,
-        JobResultCorrections,
+        CompleteJobRequest, CompleteJobResponse, JobResult, JobResultBuilder, JobResultCorrections,
     },
-    fail::{FailJobError, FailJobRequest, FailJobResponse},
+    fail::{FailJobRequest, FailJobResponse},
     update_retries::{UpdateJobRetriesRequest, UpdateJobRetriesResponse},
     update_timeout::{UpdateJobTimeoutRequest, UpdateJobTimeoutResponse},
 };
@@ -44,7 +43,7 @@ pub use process_instance::{
     },
     modify::{ModifyProcessInstanceRequest, ModifyProcessInstanceResponse},
 };
-pub use set_variables::{SetVariablesError, SetVariablesRequest, SetVariablesResponse};
-pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse, SignalError};
-pub use throw_error::{ThrowErrorError, ThrowErrorRequest, ThrowErrorResponse};
+pub use set_variables::{SetVariablesRequest, SetVariablesResponse};
+pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse};
+pub use throw_error::{ThrowErrorRequest, ThrowErrorResponse};
 pub use topology::{TopologyRequest, TopologyResponse};

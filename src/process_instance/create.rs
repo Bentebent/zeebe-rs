@@ -1,4 +1,3 @@
-use crate::process_instance::ProcessInstanceError;
 use crate::proto;
 use crate::Client;
 use crate::ClientError;
@@ -155,7 +154,7 @@ impl CreateProcessInstanceRequest<WithProcess> {
     pub fn with_variables<T: Serialize>(
         mut self,
         variables: T,
-    ) -> Result<CreateProcessInstanceRequest<WithVariables>, ProcessInstanceError> {
+    ) -> Result<CreateProcessInstanceRequest<WithVariables>, ClientError> {
         self.input = Some(serde_json::to_value(variables)?);
         Ok(self.transition())
     }
@@ -248,7 +247,7 @@ impl CreateProcessInstanceRequest<WithResult> {
         self,
     ) -> Result<CreateProcessInstanceWithResult<T>, ClientError> {
         let res = self.send().await?;
-        Ok(res.try_into()?)
+        res.try_into()
     }
 }
 
@@ -370,7 +369,7 @@ impl<T: DeserializeOwned> CreateProcessInstanceWithResult<T> {
 impl<T: DeserializeOwned> TryFrom<proto::CreateProcessInstanceWithResultResponse>
     for CreateProcessInstanceWithResult<T>
 {
-    type Error = ProcessInstanceError;
+    type Error = ClientError;
     fn try_from(
         value: proto::CreateProcessInstanceWithResultResponse,
     ) -> Result<CreateProcessInstanceWithResult<T>, Self::Error> {

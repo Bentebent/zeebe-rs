@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
-use thiserror::Error;
-
-/// Errors that can occur when setting variables
-#[derive(Error, Debug)]
-pub enum SetVariablesError {
-    /// Failed to deserialize JSON variables
-    #[error("failed to deserialize json")]
-    DeserializeFailed(#[from] serde_json::Error),
-}
 
 // State machine marker types
 /// Initial state - no element instance key set
@@ -118,7 +109,7 @@ impl SetVariablesRequest<WithInstanceKey> {
     pub fn with_variable<T: Serialize>(
         mut self,
         data: T,
-    ) -> Result<SetVariablesRequest<WithVariables>, SetVariablesError> {
+    ) -> Result<SetVariablesRequest<WithVariables>, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self.transition())
     }

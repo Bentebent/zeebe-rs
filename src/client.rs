@@ -1,5 +1,5 @@
 use crate::{
-    decision::{EvaluateDecisionError, EvaluateDecisionRequest},
+    decision::EvaluateDecisionRequest,
     incident::ResolveIncidentRequest,
     job::{
         complete::CompleteJobRequest, fail::FailJobRequest,
@@ -10,10 +10,9 @@ use crate::{
     process_instance::{
         cancel::CancelProcessInstanceRequest, create::CreateProcessInstanceRequest,
         migrate::MigrateProcessInstanceRequest, modify::ModifyProcessInstanceRequest,
-        ProcessInstanceError,
     },
     proto::gateway_client::GatewayClient,
-    resource::{DeleteResourceRequest, DeployResourceRequest},
+    resource::{DeleteResourceRequest, DeployResourceError, DeployResourceRequest},
     set_variables::SetVariablesRequest,
     signal::BroadcastSignalRequest,
     throw_error::ThrowErrorRequest,
@@ -32,10 +31,10 @@ pub enum ClientError {
     RequestFailed(#[from] tonic::Status),
 
     #[error(transparent)]
-    InstanceError(#[from] ProcessInstanceError),
+    JsonError(#[from] serde_json::Error),
 
     #[error(transparent)]
-    DecisionError(#[from] EvaluateDecisionError),
+    ResourceError(#[from] DeployResourceError),
 }
 
 #[derive(Error, Debug)]

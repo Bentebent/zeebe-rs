@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
-use thiserror::Error;
-
-/// Errors that can occur during job failure handling
-#[derive(Error, Debug)]
-pub enum FailJobError {
-    /// Error that occurred during JSON serialization/deserialization
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-}
 
 /// Initial state for the FailJobRequest builder pattern
 pub struct Initial;
@@ -97,7 +88,7 @@ impl FailJobRequest<WithKey> {
     }
 
     /// Sets variables to be included with the job failure
-    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, FailJobError> {
+    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
     }

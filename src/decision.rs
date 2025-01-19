@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::{de::DeserializeOwned, Serialize};
-use thiserror::Error;
-
-/// Errors that can occur during decision evaluation
-#[derive(Error, Debug)]
-pub enum EvaluateDecisionError {
-    /// Error that occurred during JSON serialization/deserialization
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-}
 
 // State types for the builder pattern
 pub struct Initial;
@@ -107,7 +98,7 @@ impl EvaluateDecisionRequest<WithId> {
     ///
     /// The variables must be a JSON object, as variables will be mapped in a key-value fashion.
     /// For example: `{ "a": 1, "b": 2 }` will create two variables named "a" and "b".
-    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, EvaluateDecisionError> {
+    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
     }
@@ -127,7 +118,7 @@ impl EvaluateDecisionRequest<WithId> {
             })
             .await?;
 
-        Ok(res.into_inner().try_into()?)
+        res.into_inner().try_into()
     }
 }
 
@@ -368,7 +359,7 @@ pub struct EvaluateDecisionResponse<T: DeserializeOwned> {
 }
 
 impl<T: DeserializeOwned> TryFrom<proto::EvaluateDecisionResponse> for EvaluateDecisionResponse<T> {
-    type Error = EvaluateDecisionError;
+    type Error = ClientError;
     fn try_from(
         value: proto::EvaluateDecisionResponse,
     ) -> Result<EvaluateDecisionResponse<T>, Self::Error> {

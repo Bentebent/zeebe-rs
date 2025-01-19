@@ -1,4 +1,3 @@
-use super::ProcessInstanceError;
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
 
@@ -79,7 +78,7 @@ impl ActivateInstructionBuilder {
         mut self,
         scope_id: String,
         data: T,
-    ) -> Result<Self, ProcessInstanceError> {
+    ) -> Result<Self, ClientError> {
         self.variable_instructions.push(VariableInstruction {
             scope_id,
             variables: serde_json::to_value(data)?,

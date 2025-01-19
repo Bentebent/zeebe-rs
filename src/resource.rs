@@ -150,7 +150,7 @@ impl DeployResourceRequest<WithFile> {
     /// - MissingName: File name missing
     pub fn read_resource_files(
         mut self,
-    ) -> Result<DeployResourceRequest<WithDefinition>, DeployResourceError> {
+    ) -> Result<DeployResourceRequest<WithDefinition>, ClientError> {
         if let Some(resource_files) = self.resource_file_paths.take() {
             let contents: Result<Vec<(String, Vec<u8>)>, DeployResourceError> = resource_files
                 .into_iter()

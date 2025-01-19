@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
-use thiserror::Error;
-
-/// Errors that can occur when broadcasting signals
-#[derive(Error, Debug)]
-pub enum SignalError {
-    /// Failed to serialize variables to JSON format
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-}
 
 // State machine marker types
 /// Initial state - no signal name set
@@ -80,7 +71,7 @@ impl BroadcastSignalRequest<WithName> {
     ///
     /// # Notes
     /// Must be a JSON object, e.g. `{ "a": 1, "b": 2 }`. Arrays like `[1, 2]` are not valid.
-    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, SignalError> {
+    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
     }

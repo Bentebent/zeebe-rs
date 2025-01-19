@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
-use thiserror::Error;
-
-/// Errors that can occur during job completion
-#[derive(Error, Debug)]
-pub enum CompleteJobError {
-    /// Error that occurred during JSON serialization/deserialization
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-}
 
 /// Corrections that can be applied when completing a job
 #[derive(Debug, Clone)]
@@ -223,7 +214,7 @@ impl CompleteJobRequest<Initial> {
 
 impl CompleteJobRequest<WithKey> {
     /// Sets variables to be included with the job completion
-    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, CompleteJobError> {
+    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
     }

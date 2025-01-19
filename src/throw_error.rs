@@ -1,14 +1,5 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
-use thiserror::Error;
-
-/// Errors that can occur when throwing a business error
-#[derive(Error, Debug)]
-pub enum ThrowErrorError {
-    /// Failed to serialize variables to JSON format
-    #[error(transparent)]
-    JsonError(#[from] serde_json::Error),
-}
 
 // State machine types for enforcing valid request building
 /// Initial state - no fields set
@@ -113,7 +104,7 @@ impl ThrowErrorRequest<WithCode> {
     /// # Errors
     /// Returns JsonError if serialization fails
     /// - INVALID_ARGUMENT: Missing required fields
-    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ThrowErrorError> {
+    pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
     }
