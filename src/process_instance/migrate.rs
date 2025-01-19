@@ -2,41 +2,57 @@ use crate::proto;
 use crate::Client;
 use crate::ClientError;
 
+/// Initial state for the MigrateProcessInstanceRequest builder pattern
 #[derive(Debug, Clone)]
 pub struct Initial;
 
+/// State indicating process instance has been set
 #[derive(Debug, Clone)]
 pub struct WithProcessInstance;
 
+/// State indicating migration variables have been configured
 #[derive(Debug, Clone)]
 pub struct WithVariables;
+
+/// Marker trait for MigrateProcessInstanceRequest states
 pub trait MigrateProcessInstanceState {}
 impl MigrateProcessInstanceState for Initial {}
 impl MigrateProcessInstanceState for WithProcessInstance {}
 impl MigrateProcessInstanceState for WithVariables {}
 
+/// Instructions for mapping elements between process definitions
 #[derive(Debug, Clone)]
 pub struct MappingInstruction {
+    /// ID of the source element in the current process
     source_element_id: String,
+    /// ID of the target element in the new process
     target_element_id: String,
 }
 
+/// Plan defining how to migrate a process instance
 #[derive(Debug, Clone)]
 pub struct MigrationPlan {
+    /// Key of the process definition to migrate to
     target_process_definition_key: i64,
+    /// Instructions for mapping elements between processes
     mapping_instructions: Vec<MappingInstruction>,
 }
 
+/// Request to migrate a process instance to a different process definition
 #[derive(Debug, Clone)]
 pub struct MigrateProcessInstanceRequest<T: MigrateProcessInstanceState> {
     client: Client,
+    /// Key of the process instance to migrate
     process_instance_key: i64,
+    /// Optional migration plan defining the target process and mappings
     migration_plan: Option<MigrationPlan>,
+    /// Optional reference key for tracking this operation
     operation_reference: Option<u64>,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: MigrateProcessInstanceState> MigrateProcessInstanceRequest<T> {
+    /// Creates a new MigrateProcessInstanceRequest in its initial state
     pub(crate) fn new(client: Client) -> MigrateProcessInstanceRequest<Initial> {
         MigrateProcessInstanceRequest {
             client,
@@ -47,11 +63,13 @@ impl<T: MigrateProcessInstanceState> MigrateProcessInstanceRequest<T> {
         }
     }
 
+    /// Sets a reference key for tracking this operation
     pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
         self.operation_reference = Some(operation_reference);
         self
     }
 
+    /// Internal helper to transition between builder states
     fn transition<NewState: MigrateProcessInstanceState>(
         self,
     ) -> MigrateProcessInstanceRequest<NewState> {
@@ -66,6 +84,7 @@ impl<T: MigrateProcessInstanceState> MigrateProcessInstanceRequest<T> {
 }
 
 impl MigrateProcessInstanceRequest<Initial> {
+    /// Sets the process instance key identifying which instance to migrate
     pub fn with_process_instance_key(
         mut self,
         process_instance_key: i64,
@@ -76,6 +95,7 @@ impl MigrateProcessInstanceRequest<Initial> {
 }
 
 impl MigrateProcessInstanceRequest<WithProcessInstance> {
+    /// Sets the migration plan with target process and element mappings
     pub fn with_migration_plan(
         mut self,
         target_process_definition_key: i64,
@@ -89,12 +109,14 @@ impl MigrateProcessInstanceRequest<WithProcessInstance> {
         self.transition()
     }
 
+    /// Continues without specifying a migration plan
     pub fn without_migration_plan(self) -> MigrateProcessInstanceRequest<WithVariables> {
         self.transition()
     }
 }
 
 impl MigrateProcessInstanceRequest<WithVariables> {
+    /// Sends the process instance migration request to the Zeebe workflow engine
     pub async fn send(mut self) -> Result<MigrateProcessInstanceResponse, ClientError> {
         let res = self
             .client
@@ -124,6 +146,7 @@ impl MigrateProcessInstanceRequest<WithVariables> {
     }
 }
 
+/// Response from migrating a process instance
 #[derive(Debug, Clone)]
 pub struct MigrateProcessInstanceResponse {}
 
