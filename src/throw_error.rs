@@ -28,17 +28,6 @@ impl ThrowErrorRequestState for WithCode {}
 ///
 /// The error will be caught by an error catch event in the process.
 /// If no matching catch event exists, an incident will be raised instead.
-///
-/// # State Machine
-/// 1. Create request with client
-/// 2. Set job key (required)
-/// 3. Set error code (required)
-/// 4. Optionally set message and variables
-/// 5. Send request
-///
-/// # Errors
-/// - NOT_FOUND: No job exists with given key
-/// - FAILED_PRECONDITION: Job not in activated state
 #[derive(Debug, Clone)]
 pub struct ThrowErrorRequest<T: ThrowErrorRequestState> {
     client: Client,
