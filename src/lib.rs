@@ -15,6 +15,7 @@ pub(crate) mod set_variables;
 pub(crate) mod signal;
 pub(crate) mod throw_error;
 pub(crate) mod topology;
+pub(crate) mod worker;
 
 pub use client::{Client, ClientBuilder, ClientBuilderError, ClientError};
 pub use decision::{
@@ -23,6 +24,7 @@ pub use decision::{
 };
 pub use incident::{ResolveIncidentRequest, ResolveIncidentResponse};
 pub use job::{
+    activated_job::ActivatedJob,
     complete::{
         CompleteJobRequest, CompleteJobResponse, JobResult, JobResultBuilder, JobResultCorrections,
     },

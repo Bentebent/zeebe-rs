@@ -17,6 +17,7 @@ use crate::{
     signal::BroadcastSignalRequest,
     throw_error::ThrowErrorRequest,
     topology::TopologyRequest,
+    worker::WorkerBuilder,
 };
 use std::{path::Path, time::Duration};
 use thiserror::Error;
@@ -280,5 +281,9 @@ impl Client {
         &self,
     ) -> UpdateJobRetriesRequest<crate::job::update_retries::Initial> {
         UpdateJobRetriesRequest::<crate::job::update_retries::Initial>::new(self.clone())
+    }
+
+    pub fn worker(&self) -> WorkerBuilder<crate::worker::Initial> {
+        WorkerBuilder::<crate::worker::Initial>::new(self.clone())
     }
 }
