@@ -44,6 +44,11 @@ pub enum ClientError {
     },
 }
 
+/// Represents errors that can occur while building a `Client`.
+///
+/// The `ClientBuilderError` enum provides variants for different types of errors
+/// that can occur during the client building process, such as loading certificates,
+/// transport errors, HTTP errors, and URI parsing errors.
 #[derive(Error, Debug)]
 pub enum ClientBuilderError {
     #[error("failed to load certificate")]
@@ -59,7 +64,7 @@ pub enum ClientBuilderError {
     InvalidUri(#[from] tonic::codegen::http::uri::InvalidUri),
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Initial;
 pub struct WithAddress;
 
@@ -67,7 +72,11 @@ pub trait ClientBuilderState {}
 impl ClientBuilderState for Initial {}
 impl ClientBuilderState for WithAddress {}
 
-#[derive(Debug)]
+/// A builder for configuring and creating a `Client`.
+///
+/// The `ClientBuilder` allows you to configure various aspects of the client,
+/// such as the endpoint, TLS settings, timeouts, and OAuth configuration.
+#[derive(Debug, Clone)]
 pub struct ClientBuilder<S: ClientBuilderState> {
     endpoint: Option<String>,
     tls: Option<ClientTlsConfig>,
@@ -111,6 +120,16 @@ impl ClientBuilder<Initial> {
         self.endpoint = Some(format!("{}:{}", zeebe_address, port));
     }
 
+    /// Sets the endpoint for the Zeebe client.
+    ///
+    /// # Arguments
+    ///
+    /// * `zeebe_address` - A string slice that holds the address of the Zeebe broker.
+    /// * `port` - A 16-bit unsigned integer that holds the port number of the Zeebe broker.
+    ///
+    /// # Returns
+    ///
+    /// A `ClientBuilder<WithAddress>` instance with the Zeebe endpoint set.
     pub fn with_address(mut self, zeebe_address: &str, port: u16) -> ClientBuilder<WithAddress> {
         self.set_endpoint(zeebe_address, port);
         self.transition()
@@ -118,6 +137,19 @@ impl ClientBuilder<Initial> {
 }
 
 impl ClientBuilder<WithAddress> {
+    /// Configures OAuth authentication for the client.
+    ///
+    /// # Arguments
+    ///
+    /// * `client_id` - The client ID for OAuth authentication.
+    /// * `client_secret` - The client secret for OAuth authentication.
+    /// * `auth_url` - The URL for the OAuth authentication server.
+    /// * `audience` - The audience for the OAuth token.
+    /// * `auth_timeout` - The timeout duration for the OAuth authentication process.
+    ///
+    /// # Returns
+    ///
+    /// A `ClientBuilder<WithAddress>` instance with OAuth configuration set.
     pub fn with_oauth(
         mut self,
         client_id: String,
@@ -125,7 +157,7 @@ impl ClientBuilder<WithAddress> {
         auth_url: String,
         audience: String,
         auth_timeout: Duration,
-    ) -> ClientBuilder<WithAddress> {
+    ) -> Self {
         self.oauth_config = Some(OAuthConfig::new(
             client_id,
             client_secret,
@@ -136,16 +168,29 @@ impl ClientBuilder<WithAddress> {
         self
     }
 
-    pub fn with_tls(
-        mut self,
-        pem: &Path,
-    ) -> Result<ClientBuilder<WithAddress>, ClientBuilderError> {
+    /// Configures TLS for the client using a PEM file.
+    ///
+    /// # Arguments
+    ///
+    /// * `pem` - The path to the PEM file containing the TLS certificate.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either a `ClientBuilder<WithAddress>` instance with TLS configuration set,
+    /// or a `ClientBuilderError` if reading the PEM file fails.
+    pub fn with_tls(mut self, pem: &Path) -> Result<Self, ClientBuilderError> {
         let cert = std::fs::read_to_string(pem)?;
         self.tls = Some(ClientTlsConfig::new().ca_certificate(Certificate::from_pem(&cert)));
 
         Ok(self)
     }
 
+    /// Builds the gRPC channel for the client.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either a `Channel` instance or a `ClientBuilderError` if the channel
+    /// could not be created.
     async fn build_channel(&self) -> Result<Channel, ClientBuilderError> {
         let endpoint = self
             .endpoint
@@ -158,9 +203,23 @@ impl ClientBuilder<WithAddress> {
             channel = channel.tls_config(tls.clone())?;
         }
 
+        if let Some(timeout) = self.timeout {
+            channel = channel.timeout(timeout);
+        }
+
+        if let Some(keep_alive) = self.keep_alive {
+            channel = channel.keep_alive_timeout(keep_alive);
+        }
+
         Ok(channel.connect().await?)
     }
 
+    /// Builds the client with the configured settings.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either a `Client` instance or a `ClientBuilderError` if the client
+    /// could not be built.
     pub async fn build(self) -> Result<Client, ClientBuilderError> {
         let channel = self.build_channel().await?;
 
@@ -180,11 +239,29 @@ impl ClientBuilder<WithAddress> {
         })
     }
 
+    /// Sets the timeout duration for the client.
+    ///
+    /// # Arguments
+    ///
+    /// * `timeout` - The timeout duration.
+    ///
+    /// # Returns
+    ///
+    /// A `ClientBuilder<WithAddress>` instance with the timeout configuration set.
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
 
+    /// Sets the keep-alive duration for the client.
+    ///
+    /// # Arguments
+    ///
+    /// * `keep_alive` - The keep-alive duration.
+    ///
+    /// # Returns
+    ///
+    /// A `ClientBuilder<WithAddress>` instance with the keep-alive configuration set.
     pub fn with_keep_alive(mut self, keep_alive: Duration) -> Self {
         self.keep_alive = Some(keep_alive);
         self
@@ -224,6 +301,26 @@ pub struct Client {
 }
 
 impl Client {
+    /// Creates a new `ClientBuilder` instance for configuring and building a `Client`.
+    ///
+    /// The `ClientBuilder` allows you to set various configurations such as the endpoint,
+    /// TLS settings, timeouts, and OAuth configuration before building the `Client`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = zeebe_rs::Client::builder()
+    ///         .with_address("http://localhost", 26500)
+    ///         .build()
+    ///         .await?;
+    ///
+    ///     let topology = client.topology().send().await;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn builder() -> ClientBuilder<Initial> {
         ClientBuilder::default()
     }
