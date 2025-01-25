@@ -191,6 +191,32 @@ impl ClientBuilder<WithAddress> {
     }
 }
 
+/// A client for interacting with the Zeebe cluster.
+///
+/// The `Client` struct provides methods to create various requests and operations
+/// on the Zeebe cluster, such as deploying resources, managing process instances,
+/// handling jobs, and more.
+///
+/// # Examples
+///
+/// ```ignore
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let client = zeebe_rs::Client::builder()
+///         .with_address("http://localhost", 26500)
+///         .build()
+///         .await?;
+///
+///    let topology = client.topology().send().await;
+///
+///    Ok(())
+/// }
+/// ```
+/// # Notes
+///
+/// Each method returns a request builder that can be further configured and then sent
+/// to the Zeebe cluster. The requests are asynchronous and return futures that need to
+/// be awaited.
 #[derive(Clone, Debug)]
 pub struct Client {
     pub(crate) gateway_client: GatewayClient<InterceptedService<Channel, OAuthInterceptor>>,
@@ -202,6 +228,27 @@ impl Client {
         ClientBuilder::default()
     }
 
+    /// Waits for the first OAuth token to be fetched before returning.
+    /// Returns instantly if OAuth is not enabled.
+    /// # Examples
+    ///
+    /// ```ignore
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = zeebe_rs::Client::builder()
+    ///         // Configure client with OAuth...
+    ///        .build()
+    ///        .await?;
+    ///
+    ///     // Await first OAuth token before proceeding
+    ///     let _ = client.auth_initialized().await;
+    ///     
+    ///     // Fetch topology after acquiring OAuth token
+    ///     let topology = client.topology().send().await;
+    ///
+    ///    Ok(())
+    ///}
+    /// ```
     pub async fn auth_initialized(&self) {
         self.auth_interceptor.auth_initialized().await;
     }
