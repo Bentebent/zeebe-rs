@@ -206,6 +206,14 @@ impl Client {
         self.auth_interceptor.auth_initialized().await;
     }
 
+    /// Creates a `TopologyRequest` to build a request for fetching the toplogy
+    /// of the Zeebe cluster.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let topology = client.topology().send().await;
+    /// ```
     pub fn topology(&self) -> TopologyRequest {
         TopologyRequest::new(self.clone())
     }
