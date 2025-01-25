@@ -4,8 +4,8 @@ use tokio::sync::Mutex;
 use zeebe_rs::{ActivatedJob, Client};
 
 #[derive(Debug, Clone)]
-struct TestState {
-    pub foo: u32,
+struct ExampleSharedState {
+    pub increment_me: u32,
 }
 
 //ZEEBE_AUTHENTICATION_MODE=identity docker compose up -d
@@ -51,7 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
     }
 
-    let state = Arc::new(zeebe_rs::SharedState(Mutex::new(TestState { foo: 0 })));
+    let state = Arc::new(zeebe_rs::SharedState(Mutex::new(ExampleSharedState {
+        increment_me: 0,
+    })));
 
     client
         .worker()
@@ -65,21 +67,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_handler(|client, job, state| async move {
             println!("Hello from closure {:?}", job);
             let mut lock = state.lock().await;
-            lock.foo += 1;
+            lock.increment_me += 1;
             println!("State: {:?}", lock);
 
             payment_service(client, job).await;
         })
         .build()
-        .unwrap()
         .run()
-        .await?;
+        .await;
 
     Ok(())
 }
 
 async fn payment_service(client: Client, job: ActivatedJob) {
-    println!("Hello from task {:?}", job);
-
     let _ = client.complete_job().with_job_key(job.key()).send().await;
 }

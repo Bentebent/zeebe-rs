@@ -36,6 +36,12 @@ pub enum ClientError {
 
     #[error(transparent)]
     ResourceError(#[from] DeployResourceError),
+
+    #[error("deserialize failed on {value:?}")]
+    DeserializationFailed {
+        value: String,
+        source: serde_json::Error,
+    },
 }
 
 #[derive(Error, Debug)]
@@ -178,7 +184,6 @@ impl ClientBuilder<WithAddress> {
             OAuthInterceptor::default()
         };
         let gateway_client = GatewayClient::with_interceptor(channel, auth_interceptor.clone());
-
         Ok(Client {
             gateway_client,
             auth_interceptor,
@@ -283,6 +288,25 @@ impl Client {
         UpdateJobRetriesRequest::<crate::job::update_retries::Initial>::new(self.clone())
     }
 
+    /// Creates a `WorkerBuilder` to build a worker for processing Zeebe jobs.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// client
+    ///     .worker()
+    ///     .with_job_type(String::from("example-service"))
+    ///     .with_job_timeout(Duration::from_secs(5 * 60))
+    ///     .with_request_timeout(Duration::from_secs(10))
+    ///     .with_max_jobs_to_activate(4)
+    ///     .with_concurrency_limit(2)
+    ///     .with_handler(|client, job| async move {
+    ///        let _ = client.complete_job().with_job_key(job.key()).send().await;
+    ///    })
+    ///    .build()
+    ///    .run()
+    ///    .await;
+    /// ```
     pub fn worker(&self) -> WorkerBuilder<crate::worker::Initial> {
         WorkerBuilder::<crate::worker::Initial>::new(self.clone())
     }
