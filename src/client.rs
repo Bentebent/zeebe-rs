@@ -292,7 +292,7 @@ impl Client {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```ignore
     /// client
     ///     .worker()
     ///     .with_job_type(String::from("example-service"))

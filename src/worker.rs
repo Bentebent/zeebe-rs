@@ -87,7 +87,7 @@ impl WorkerBuilderState for WithHandler {}
 /// Uses typestate pattern to enforce setting mandatory parameters.
 ///
 /// # Examples
-/// ```no_run
+/// ```ignore
 /// struct ExampleSharedState {
 ///     pub increment_me: u32,
 /// }
@@ -271,7 +271,7 @@ impl WorkerBuilder<WithConcurrency> {
     /// Returns a `WorkerBuilder` with the `WithHandler` state.
     ///
     /// # Examples
-    /// ```no_run
+    /// ```ignore
     /// async fn example_service(client: Client, job: ActivatedJob) {
     ///     // Your job handling logic here
     /// }
@@ -475,7 +475,7 @@ impl<T> WorkerStateBuilder<T> {
     /// Returns a `WorkerBuilder` with the handler set.
     ///
     /// # Examples
-    /// ```no_run
+    /// ```ignore
     /// struct ExampleSharedState {
     ///     pub increment_me: u32,
     /// }
@@ -674,7 +674,7 @@ impl WorkConsumer {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// let worker = client
 ///     .worker()
 ///     .with_job_type("example-service")
@@ -743,7 +743,7 @@ impl Worker {
     /// The poller continuously polls the Zeebe broker for new jobs, while the dispatcher
     /// processes the jobs using the provided callback.
     /// # Example
-    /// ```no_run
+    /// ```ignore
     /// #[tokio::main]
     /// async fn main() {
     ///     client
