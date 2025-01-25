@@ -1,5 +1,11 @@
 use crate::{proto, ActivatedJob, Client, ClientError};
-use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
+use std::{
+    future::Future,
+    ops::{Deref, DerefMut},
+    pin::Pin,
+    sync::Arc,
+    time::Duration,
+};
 use tokio::{
     sync::{
         mpsc::{self, Receiver, Sender},
@@ -8,9 +14,48 @@ use tokio::{
     time::{interval, timeout, Interval},
 };
 
-type AsyncHandler =
-    dyn Fn(Client, ActivatedJob) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync;
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(15);
+type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
+
+#[derive(Debug)]
+pub struct SharedState<T>(pub T);
+
+impl<T> Deref for SharedState<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for SharedState<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+trait JobHandler: Send + Sync {
+    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFuture;
+}
+
+impl<F> JobHandler for F
+where
+    F: Fn(Client, ActivatedJob) -> BoxFuture + Send + Sync + 'static,
+{
+    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFuture {
+        (self)(client, job)
+    }
+}
+
+impl<F, T> JobHandler for (F, Arc<SharedState<T>>)
+where
+    F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> BoxFuture + Send + Sync + 'static,
+    T: Send + Sync + 'static,
+{
+    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFuture {
+        let state = self.1.clone();
+        (self.0)(client, job, state)
+    }
+}
 
 pub struct Initial {}
 pub struct WithJobType {}
@@ -37,7 +82,7 @@ pub struct WorkerBuilder<T> {
     timeout: Duration,
     max_jobs_to_activate: i32,
     concurrency_limit: u32,
-    worker_callback: Option<Arc<AsyncHandler>>,
+    worker_callback: Option<Arc<Box<dyn JobHandler>>>,
     fetch_variable: Vec<String>,
     request_timeout: Duration,
     tenant_ids: Vec<String>,
@@ -128,8 +173,20 @@ impl WorkerBuilder<WithConcurrency> {
         F: Fn(Client, ActivatedJob) -> R + Send + Sync + 'static,
         R: Future<Output = ()> + Send + 'static,
     {
-        self.worker_callback = Some(Arc::new(move |client, job| Box::pin(handler(client, job))));
+        self.worker_callback = Some(Arc::new(Box::new(move |client, job| {
+            Box::pin(handler(client, job)) as BoxFuture
+        })));
         self.transition()
+    }
+
+    pub fn with_state<T>(self, shared_state: Arc<SharedState<T>>) -> WorkerStateBuilder<T>
+    where
+        T: Send + Sync + 'static,
+    {
+        WorkerStateBuilder {
+            builder: self,
+            state: shared_state,
+        }
     }
 }
 
@@ -177,6 +234,28 @@ impl WorkerBuilder<WithHandler> {
     pub fn with_tenant_ids(mut self, mut tenant_ids: Vec<String>) -> Self {
         self.tenant_ids.append(&mut tenant_ids);
         self
+    }
+}
+pub struct WorkerStateBuilder<T> {
+    builder: WorkerBuilder<WithConcurrency>,
+    state: Arc<SharedState<T>>,
+}
+
+impl<T> WorkerStateBuilder<T> {
+    pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler>
+    where
+        T: Send + Sync + 'static,
+        F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> R + Send + Sync + 'static,
+        R: Future<Output = ()> + Send + 'static,
+    {
+        let handler_tuple = (
+            move |client: Client, job: ActivatedJob, state: Arc<SharedState<T>>| {
+                Box::pin(handler(client, job, state)) as BoxFuture
+            },
+            self.state.clone(),
+        );
+        self.builder.worker_callback = Some(Arc::new(Box::new(handler_tuple)));
+        self.builder.transition()
     }
 }
 
@@ -284,7 +363,7 @@ struct WorkConsumer {
     job_rx: Receiver<ActivatedJob>,
     poll_tx: Sender<PollingMessage>,
     semaphore: Arc<Semaphore>,
-    worker_callback: Arc<AsyncHandler>,
+    worker_callback: Arc<Box<dyn JobHandler>>,
 }
 
 impl WorkConsumer {
@@ -296,7 +375,7 @@ impl WorkConsumer {
             let callback = self.worker_callback.clone();
 
             tokio::spawn(async move {
-                (callback)(client, job).await;
+                callback.execute(client, job).await;
                 let _ = poll_tx.send(PollingMessage::JobFinished).await;
 
                 drop(permit);
@@ -315,7 +394,7 @@ impl Worker {
         client: Client,
         request: proto::ActivateJobsRequest,
         request_timeout: Duration,
-        callback: Arc<AsyncHandler>,
+        callback: Arc<Box<dyn JobHandler>>,
     ) -> Worker {
         let (job_tx, job_rx) = mpsc::channel(32);
         let (poll_tx, poll_rx) = mpsc::channel(32);
