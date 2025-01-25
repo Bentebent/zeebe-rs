@@ -4,6 +4,9 @@ build-debug:
 build-release:
 	cargo build --release
 
+examples:
+	cargo build --examples
+
 fmt-check:
 	cargo +nightly fmt -- --check
 
