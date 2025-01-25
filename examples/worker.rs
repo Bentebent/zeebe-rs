@@ -1,6 +1,12 @@
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
+use tokio::sync::Mutex;
 use zeebe_rs::{ActivatedJob, Client};
+
+#[derive(Debug, Clone)]
+struct TestState {
+    pub foo: u32,
+}
 
 //ZEEBE_AUTHENTICATION_MODE=identity docker compose up -d
 //URL: http://localhost:26500
@@ -36,8 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     println!("{:?}", res);
 
-    /*
-    for i in 0..10 {
+    for _ in 0..10 {
         client
             .create_process_instance()
             .with_bpmn_process_id(String::from("order-process"))
@@ -45,7 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .send()
             .await?;
     }
-    */
+
+    let state = Arc::new(zeebe_rs::SharedState(Mutex::new(TestState { foo: 0 })));
 
     client
         .worker()
@@ -55,8 +61,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_max_jobs_to_activate(4)
         .with_concurrency_limit(2)
         //.with_handler(payment_service)
-        .with_handler(|client, job| async move {
+        .with_state(state)
+        .with_handler(|client, job, state| async move {
             println!("Hello from closure {:?}", job);
+            let mut lock = state.lock().await;
+            lock.foo += 1;
+            println!("State: {:?}", lock);
+
             payment_service(client, job).await;
         })
         .build()
@@ -69,4 +80,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn payment_service(client: Client, job: ActivatedJob) {
     println!("Hello from task {:?}", job);
+
+    let _ = client.complete_job().with_job_key(job.key()).send().await;
 }
