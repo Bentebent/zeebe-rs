@@ -104,16 +104,6 @@ impl<S: ClientBuilderState> ClientBuilder<S> {
             _state: std::marker::PhantomData,
         }
     }
-
-    pub fn with_timeout(mut self, seconds: u64) -> Self {
-        self.timeout = Some(Duration::from_secs(seconds));
-        self
-    }
-
-    pub fn with_keep_alive(mut self, seconds: u64) -> Self {
-        self.keep_alive = Some(Duration::from_secs(seconds));
-        self
-    }
 }
 
 impl ClientBuilder<Initial> {
@@ -188,6 +178,16 @@ impl ClientBuilder<WithAddress> {
             gateway_client,
             auth_interceptor,
         })
+    }
+
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    pub fn with_keep_alive(mut self, keep_alive: Duration) -> Self {
+        self.keep_alive = Some(keep_alive);
+        self
     }
 }
 
