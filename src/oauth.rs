@@ -1,4 +1,7 @@
-use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
+use oauth2::{
+    basic::BasicClient, reqwest, AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet,
+    TokenResponse, TokenUrl,
+};
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, SystemTime},
@@ -19,17 +22,6 @@ pub struct OAuthConfig {
     pub client_secret: String,
     pub auth_url: String,
     pub audience: String,
-}
-
-impl From<OAuthConfig> for BasicClient {
-    fn from(config: OAuthConfig) -> Self {
-        BasicClient::new(
-            ClientId::new(config.client_id),
-            Some(ClientSecret::new(config.client_secret)),
-            AuthUrl::new(config.auth_url.clone()).unwrap(),
-            Some(TokenUrl::new(config.auth_url).unwrap()),
-        )
-    }
 }
 
 impl OAuthConfig {
@@ -77,7 +69,8 @@ struct CachedToken {
 
 #[derive(Clone, Debug)]
 pub(crate) struct OAuthProvider {
-    client: BasicClient,
+    client: BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
+    reqwest_client: reqwest::Client,
     audience: String,
     request_timeout: Duration,
     cached_token: Arc<Mutex<Option<CachedToken>>>,
@@ -87,10 +80,19 @@ pub(crate) struct OAuthProvider {
 impl OAuthProvider {
     fn new(config: OAuthConfig, request_timeout: Duration) -> Self {
         let audience = config.audience.clone();
-        let client = config.into();
+        let client = BasicClient::new(ClientId::new(config.client_id))
+            .set_client_secret(ClientSecret::new(config.client_secret))
+            .set_auth_uri(AuthUrl::new(config.auth_url.clone()).unwrap())
+            .set_token_uri(TokenUrl::new(config.auth_url.clone()).unwrap());
+
+        let reqwest_client = reqwest::ClientBuilder::new()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("Client should build");
 
         OAuthProvider {
             client,
+            reqwest_client,
             audience,
             request_timeout,
             cached_token: Arc::new(Mutex::new(None)),
@@ -146,7 +148,7 @@ impl OAuthProvider {
 
         let result = match timeout(
             self.request_timeout,
-            token_request.request_async(oauth2::reqwest::async_http_client),
+            token_request.request_async(&self.reqwest_client),
         )
         .await
         {
