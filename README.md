@@ -2,9 +2,77 @@
 
 [![CI](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml)
 
-A Rust client and worker implementation for interacting with [Zeebe](https://camunda.com/platform/zeebe/) built using [Tonic](https://github.com/hyperium/tonic) and [Tokio](https://github.com/tokio-rs/tokio).
+A Rust client and worker implementation for interacting with [Camunda Zeebe](https://camunda.com/platform/zeebe/) built using [Tonic](https://github.com/hyperium/tonic), [Tokio](https://github.com/tokio-rs/tokio) and [Serde](https://github.com/serde-rs/serde).
 
 ## Usage
+
+Add this crate to your `Cargo.toml` alongside `Tokio` and `Serde`.
+
+```toml
+serde = "1.0.217"
+tokio = "1.43.0"
+zeebe-rs = "1.0.0"
+```
+
+### Example
+
+```rust
+
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, time::Duration};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct HelloWorld {
+    hello: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    //Create a client with OAuth
+    let client = zeebe_rs::Client::builder()
+        .with_address("http://localhost", 26500)
+        .with_oauth(
+            String::from("zeebe"),
+            String::from("zecret"),
+            String::from(
+                "http://localhost:18080/auth/realms/camunda-platform/protocol/openid-connect/token",
+            ),
+            String::from("zeebe-api"),
+            Duration::from_secs(30),
+        )
+        .build()
+        .await?;
+
+    //Block until first OAuth token has been retrieved
+    let _ = client.auth_initialized().await;
+
+    //Deploy a BPMN from file
+    let result = client
+        .deploy_resource()
+        .with_resource_file(PathBuf::from("./examples/resources/hello_world.bpmn"))
+        .read_resource_files()?
+        .send()
+        .await?;
+
+
+    //Create a process instance
+    let result = client
+        .create_process_instance()
+        .with_bpmn_process_id(String::from("hello_world"))
+        .with_variables(HelloWorld {
+            hello: String::from("world"),
+        })?
+        .with_result(None)
+        .send_with_result::<HelloWorld>()
+        .await?;
+
+    Ok(())
+}
+
+```
+
+Additional examples available in the documentation and `examples` folder.
 
 ## Development
 
@@ -13,15 +81,6 @@ Built using:
 - rustc 1.83.0
 - cargo 1.85.0-nightly (4c39aaff6 2024-11-25) (fmt and clippy only)
 - [protoc v29.2](https://github.com/protocolbuffers/protobuf/releases/tag/v29.2)
-
-## TODO
-
-- [ ] Zeebe worker
-- [ ] Unit tests
-- [ ] Continuous delivery to crates.io
-- [ ] Automated protobuf updates
-- [ ] Examples
-- [ ] Documentation
 
 ## License
 
