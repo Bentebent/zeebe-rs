@@ -1,13 +1,9 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
 
-// State machine marker types
-/// Initial state - no signal name set
 pub struct Initial;
-/// State after signal name is set
 pub struct WithName;
 
-/// State machine type constraints
 pub trait BroadcastSignalRequestState {}
 impl BroadcastSignalRequestState for Initial {}
 impl BroadcastSignalRequestState for WithName {}
@@ -16,20 +12,25 @@ impl BroadcastSignalRequestState for WithName {}
 ///
 /// A signal can trigger multiple catching signal events in different process instances.
 /// Signal events are matched by name and tenant ID if multi-tenancy is enabled.
+///
+/// # Examples
+/// ```ignore
+/// client
+///     .broadcast_signal()
+///     .with_signal_name(String::from("Hello_Signal"))
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct BroadcastSignalRequest<T: BroadcastSignalRequestState> {
     client: Client,
-    /// Name of the signal to broadcast
     signal_name: String,
-    /// Variables available to all triggered signal events
     variables: serde_json::Value,
-    /// ID of tenant that owns the signal
     tenant_id: String,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: BroadcastSignalRequestState> BroadcastSignalRequest<T> {
-    /// Creates a new broadcast signal request
     pub(crate) fn new(client: Client) -> BroadcastSignalRequest<Initial> {
         BroadcastSignalRequest {
             client,
@@ -40,7 +41,6 @@ impl<T: BroadcastSignalRequestState> BroadcastSignalRequest<T> {
         }
     }
 
-    /// Internal helper to transition between states
     fn transition<NewState: BroadcastSignalRequestState>(self) -> BroadcastSignalRequest<NewState> {
         BroadcastSignalRequest {
             client: self.client,
@@ -57,6 +57,9 @@ impl BroadcastSignalRequest<Initial> {
     ///
     /// # Arguments
     /// * `signal_name` - Name that will be matched with signal catch events
+    ///
+    /// # Returns
+    /// A `BroadcastSignalRequest` in the `WithName` state
     pub fn with_signal_name(mut self, signal_name: String) -> BroadcastSignalRequest<WithName> {
         self.signal_name = signal_name;
         self.transition()
@@ -69,10 +72,14 @@ impl BroadcastSignalRequest<WithName> {
     /// # Arguments
     /// * `data` - Variables as serializable type that will be converted to JSON
     ///
+    /// # Returns
+    /// A `Result` containing the updated `BroadcastSignalRequest` or a `ClientError`
+    ///
     /// # Notes
     /// Must be a JSON object, e.g. `{ "a": 1, "b": 2 }`. Arrays like `[1, 2]` are not valid.
     pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
-        self.variables = serde_json::to_value(data)?;
+        self.variables = serde_json::to_value(data)
+            .map_err(|e| ClientError::SerializationFailed { source: e })?;
         Ok(self)
     }
 
@@ -80,6 +87,9 @@ impl BroadcastSignalRequest<WithName> {
     ///
     /// # Arguments
     /// * `tenant_id` - ID of tenant that owns the signal
+    ///
+    /// # Returns
+    /// The updated `BroadcastSignalRequest`
     pub fn with_tenant_id(mut self, tenant_id: String) -> Self {
         self.tenant_id = tenant_id;
         self
@@ -87,9 +97,12 @@ impl BroadcastSignalRequest<WithName> {
 
     /// Sends the broadcast signal request to the gateway
     ///
+    /// # Returns
+    /// A `Result` containing the `BroadcastSignalResponse` or a `ClientError`
+    ///
     /// # Errors
-    /// - INVALID_ARGUMENT: Missing signal name or invalid variables format
-    /// - PERMISSION_DENIED: Not authorized for tenant
+    /// - `INVALID_ARGUMENT`: Missing signal name or invalid variables format
+    /// - `PERMISSION_DENIED`: Not authorized for tenant
     pub async fn send(mut self) -> Result<BroadcastSignalResponse, ClientError> {
         let res = self
             .client
@@ -112,9 +125,7 @@ impl BroadcastSignalRequest<WithName> {
 /// - Tenant ID that owns the signal
 #[derive(Debug, Clone)]
 pub struct BroadcastSignalResponse {
-    /// Unique identifier for this signal broadcast operation
     key: i64,
-    /// ID of tenant that owns the signal, empty if multi-tenancy disabled
     tenant_id: String,
 }
 
@@ -129,12 +140,17 @@ impl From<proto::BroadcastSignalResponse> for BroadcastSignalResponse {
 
 impl BroadcastSignalResponse {
     /// Returns the unique identifier for this signal broadcast operation
+    ///
+    /// # Returns
+    /// The unique identifier for this signal broadcast operation
     pub fn key(&self) -> i64 {
         self.key
     }
 
     /// Returns the ID of tenant that owns the signal
-    /// Empty if multi-tenancy is disabled
+    ///
+    /// # Returns
+    /// The ID of tenant that owns the signal, empty if multi-tenancy is disabled
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
