@@ -444,6 +444,18 @@ impl Client {
         CancelProcessInstanceRequest::<crate::process_instance::cancel::Initial>::new(self.clone())
     }
 
+    /// Creates a `MigrateProcessInstanceRequest` to migrate a running process
+    /// instance in Zeebe.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .migrate_process_instance()
+    ///     .with_process_instance_key(12356)
+    ///     .without_migration_plan()
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn migrate_process_instance(
         &self,
     ) -> MigrateProcessInstanceRequest<crate::process_instance::migrate::Initial> {
