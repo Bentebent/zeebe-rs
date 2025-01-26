@@ -535,6 +535,17 @@ impl Client {
         PublishMessageRequest::<crate::message::Initial>::new(self.clone())
     }
 
+    /// Creates a `BroadcastSignalRequest` to publish a signal to Zeebe
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// client
+    ///     .broadcast_signal()
+    ///     .with_signal_name(String::from("Hello_Signal"))
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn broadcast_signal(&self) -> BroadcastSignalRequest<crate::signal::Initial> {
         BroadcastSignalRequest::<crate::signal::Initial>::new(self.clone())
     }
