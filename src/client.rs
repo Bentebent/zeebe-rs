@@ -42,6 +42,9 @@ pub enum ClientError {
         value: String,
         source: serde_json::Error,
     },
+
+    #[error("serialize failed")]
+    SerializationFailed { source: serde_json::Error },
 }
 
 /// Represents errors that can occur while building a `Client`.
@@ -394,6 +397,28 @@ impl Client {
         DeleteResourceRequest::<crate::resource::Initial>::new(self.clone())
     }
 
+    /// Creates a `CrateProcessInstanceRequest` to build a request for creating
+    /// a process instance in Zeebe.
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Create a process instance with a BPMN process ID and no input variables
+    /// client
+    ///     .create_process_instance()
+    ///     .with_bpmn_process_id(String::from("order-process"))
+    ///     .without_input()
+    ///     .send()
+    ///     .await?;
+    ///
+    /// // Create a process instance with a process definition key and input variables
+    /// client
+    ///     .create_process_instance()
+    ///     .with_process_definition_key(12345)
+    ///     .with_variables(json!({"orderId": 123}))
+    ///     .unwrap()
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn create_process_instance(
         &self,
     ) -> CreateProcessInstanceRequest<crate::process_instance::create::Initial> {
