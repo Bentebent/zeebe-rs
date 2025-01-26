@@ -107,6 +107,10 @@ impl CreateProcessInstanceRequest<Initial> {
     /// # Arguments
     ///
     /// * `bpmn_process_id` - The BPMN process ID of the instance to create.
+    /// 
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithProcess>` to continue the request building.
     pub fn with_bpmn_process_id(
         mut self,
         bpmn_process_id: String,
@@ -120,6 +124,10 @@ impl CreateProcessInstanceRequest<Initial> {
     /// # Arguments
     ///
     /// * `process_definition_key` - The unique key identifying the process definition.
+    ///
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithProcess>` to continue the request building.
     pub fn with_process_definition_key(
         mut self,
         process_definition_key: i64,
@@ -139,6 +147,10 @@ impl CreateProcessInstanceRequest<WithProcess> {
     /// # Errors
     ///
     /// Returns `ClientError` if variables cannot be serialized to JSON.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either a `CreateProcessInstanceRequest<WithVariables>` if successful, or a `ClientError` if serialization fails.
     pub fn with_variables<T: Serialize>(
         mut self,
         variables: T,
@@ -151,6 +163,10 @@ impl CreateProcessInstanceRequest<WithProcess> {
     }
 
     /// Creates the process instance without any input variables
+    ///
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithVariables>` to continue the request building.
     pub fn without_input(self) -> CreateProcessInstanceRequest<WithVariables> {
         self.transition()
     }
@@ -190,6 +206,10 @@ impl CreateProcessInstanceRequest<WithVariables> {
     ///
     /// # Arguments
     /// * `fetch_variables` - Optional list of variable names to fetch, or None to fetch all
+    /// 
+    /// # Returns
+    /// 
+    /// A `CreateProcessInstanceRequest<WithResult>` to continue the request building.
     pub fn with_result(
         mut self,
         fetch_variables: Option<Vec<String>>,
@@ -205,6 +225,10 @@ impl CreateProcessInstanceRequest<WithVariables> {
     /// # Arguments
     ///
     /// * `version` - The version of the process definition.
+    ///
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithVariables>` to continue the request building.
     pub fn with_version(mut self, version: i32) -> Self {
         self.version = Some(version);
         self
@@ -215,6 +239,10 @@ impl CreateProcessInstanceRequest<WithVariables> {
     /// # Arguments
     ///
     /// * `tenant_id` - The tenant ID.
+    ///
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithVariables>` to continue the request building.
     pub fn with_tenant_id(mut self, tenant_id: String) -> Self {
         self.tenant_id = tenant_id;
         self
@@ -225,6 +253,10 @@ impl CreateProcessInstanceRequest<WithVariables> {
     /// # Arguments
     ///
     /// * `operation_reference` - The reference key.
+    ///
+    /// # Returns
+    ///
+    /// A `CreateProcessInstanceRequest<WithVariables>` to continue the request building.
     pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
         self.operation_reference = Some(operation_reference);
         self

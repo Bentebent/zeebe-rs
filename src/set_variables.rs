@@ -17,7 +17,7 @@ impl SetVariablesRequestState for WithVariables {}
 /// - Local: Variables only visible in specified scope
 /// - Hierarchical: Variables propagate up to parent scopes
 ///
-/// # Example
+/// # Examples
 /// Two scopes with variables:
 /// - Scope 1: `{ "foo": 2 }`
 /// - Scope 2: `{ "bar": 1 }`
@@ -27,10 +27,18 @@ impl SetVariablesRequestState for WithVariables {}
 /// - Local=false: Scope 1 becomes `{ "foo": 5 }`, Scope 2 unchanged
 ///
 /// ```ignore
+///
+/// #[derive(Serialize)] 
+/// struct Foo {
+///     bar: String
+/// }
+/// 
 /// client
 ///     .set_variables()
 ///     .with_element_instance_key(123456)
-///     .with_variable()
+///     .with_variable(Foo {bar: String::from("foobar")})
+///     .send()
+///     .await?;
 /// ```
 #[derive(Debug, Clone)]
 pub struct SetVariablesRequest<T: SetVariablesRequestState> {
