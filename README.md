@@ -1,6 +1,8 @@
 # zeebe-rs
 
 [![CI](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml)
+![docs.rs](https://img.shields.io/docsrs/zeebe-rs)
+[![crates.io](https://img.shields.io/crates/v/zeebe-rs.svg)](https://crates.io/crates/zeebe-rs)
 
 A Rust client and worker implementation for interacting with [Camunda Zeebe](https://camunda.com/platform/zeebe/) built using [Tonic](https://github.com/hyperium/tonic), [Tokio](https://github.com/tokio-rs/tokio) and [Serde](https://github.com/serde-rs/serde).
 
