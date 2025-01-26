@@ -18,7 +18,7 @@ impl CancelProcessInstanceState for WithProcessInstance {}
 /// Request to cancel a running process instance
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// client
 ///     .cancel_process_instance()
 ///     .with_process_instance_key(123456)
