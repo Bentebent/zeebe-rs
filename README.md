@@ -14,6 +14,8 @@ tokio = "1.43.0"
 zeebe-rs = "1.0.0"
 ```
 
+`zeebe-rs` uses the builder pattern together with type states extensively to guarantee that requests to Zeebe contain all required information. The client supports type safe conversions of data to and from Zeebe with `Serde`.
+
 ### Example
 
 ```rust
@@ -81,6 +83,10 @@ Built using:
 - rustc 1.83.0
 - cargo 1.85.0-nightly (4c39aaff6 2024-11-25) (fmt and clippy only)
 - [protoc v29.2](https://github.com/protocolbuffers/protobuf/releases/tag/v29.2)
+
+## Contributing
+
+We welcome contributions from the community, see our [contribution guidelines](CONTRIBUTING.md).
 
 ## License
 
