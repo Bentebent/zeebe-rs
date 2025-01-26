@@ -1,36 +1,40 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
+use std::time::Duration;
 
-/// Initial state for the FailJobRequest builder pattern
 pub struct Initial;
-
-/// State indicating the job key has been set
 pub struct WithKey;
 
-/// Marker trait for FailJobRequest states
 pub trait FailJobRequestState {}
 impl FailJobRequestState for Initial {}
 impl FailJobRequestState for WithKey {}
 
 /// Request to mark a job as failed
+///
+/// This struct uses a builder pattern with state transitions to ensure that
+/// required fields are set before sending the request. The state transitions
+/// are enforced at compile time using marker traits.
+///
+/// # Examples
+/// ```ignore
+/// client
+///     .fail_job()
+///     .with_job_key(123456)
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct FailJobRequest<T: FailJobRequestState> {
     client: Client,
-    /// The unique key identifying the job
     job_key: i64,
-    /// Number of remaining retries for the job
     retries: i32,
-    /// Message describing why the job failed
     error_message: String,
-    /// Time to wait before retrying the job (in milliseconds)
     retry_back_off: i64,
-    /// Variables to be set when failing the job
     variables: serde_json::Value,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: FailJobRequestState> FailJobRequest<T> {
-    /// Creates a new FailJobRequest in its initial state
     pub(crate) fn new(client: Client) -> FailJobRequest<Initial> {
         FailJobRequest {
             client,
@@ -43,7 +47,6 @@ impl<T: FailJobRequestState> FailJobRequest<T> {
         }
     }
 
-    /// Internal helper to transition between builder states
     fn transition<NewState: FailJobRequestState>(self) -> FailJobRequest<NewState> {
         FailJobRequest {
             client: self.client,
@@ -59,6 +62,14 @@ impl<T: FailJobRequestState> FailJobRequest<T> {
 
 impl FailJobRequest<Initial> {
     /// Sets the job key to identify which job failed
+    ///
+    /// # Arguments
+    ///
+    /// * `job_key` - The unique key identifying the job
+    ///
+    /// # Returns
+    ///
+    /// A FailJobRequest in the `WithKey` state
     pub fn with_job_key(mut self, job_key: i64) -> FailJobRequest<WithKey> {
         self.job_key = job_key;
         self.transition()
@@ -67,12 +78,28 @@ impl FailJobRequest<Initial> {
 
 impl FailJobRequest<WithKey> {
     /// Sets the number of remaining retries for the job
+    ///
+    /// # Arguments
+    ///
+    /// * `retries` - The number of remaining retries for the job
+    ///
+    /// # Returns
+    ///
+    /// The updated FailJobRequest
     pub fn with_retries(mut self, retries: i32) -> Self {
         self.retries = retries;
         self
     }
 
     /// Sets an error message describing why the job failed
+    ///
+    /// # Arguments
+    ///
+    /// * `error_message` - A message describing why the job failed
+    ///
+    /// # Returns
+    ///
+    /// The updated FailJobRequest
     pub fn with_error_message(mut self, error_message: String) -> Self {
         self.error_message = error_message;
         self
@@ -81,19 +108,37 @@ impl FailJobRequest<WithKey> {
     /// Sets the time to wait before retrying the job
     ///
     /// # Arguments
-    /// * `retry_back_off_sec` - Time to wait in seconds before retrying
-    pub fn with_retry_back_off(mut self, retry_back_off_sec: i64) -> Self {
-        self.retry_back_off = retry_back_off_sec * 1000;
+    ///
+    /// * `retry_back_off` - Time to wait in seconds before retrying
+    ///
+    /// # Returns
+    ///
+    /// The updated FailJobRequest
+    pub fn with_retry_back_off(mut self, retry_back_off: Duration) -> Self {
+        self.retry_back_off = retry_back_off.as_millis() as i64;
         self
     }
 
     /// Sets variables to be included with the job failure
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The variables to be included with the job failure
+    ///
+    /// # Returns
+    ///
+    /// The updated FailJobRequest or a ClientError if serialization fails
     pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
-        self.variables = serde_json::to_value(data)?;
+        self.variables = serde_json::to_value(data)
+            .map_err(|e| ClientError::SerializationFailed { source: e })?;
         Ok(self)
     }
 
     /// Sends the job failure request to the Zeebe workflow engine
+    ///
+    /// # Returns
+    ///
+    /// A Result containing a FailJobResponse if successful, or a ClientError if the request fails
     pub async fn send(mut self) -> Result<FailJobResponse, ClientError> {
         let res = self
             .client
