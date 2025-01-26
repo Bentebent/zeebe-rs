@@ -378,6 +378,18 @@ impl Client {
         DeployResourceRequest::<crate::resource::Initial>::new(self.clone())
     }
 
+    /// Creates a `DeleteResourceRequest` to build a request for deleting a
+    /// deployed resource in Zeebe.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let response = client
+    ///     .delete_resource()
+    ///     .with_resource_key(12345)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn delete_resource(&self) -> DeleteResourceRequest<crate::resource::Initial> {
         DeleteResourceRequest::<crate::resource::Initial>::new(self.clone())
     }
