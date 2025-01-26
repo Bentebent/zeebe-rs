@@ -8,7 +8,7 @@ A Rust client and worker implementation for interacting with [Camunda Zeebe](htt
 
 ## Usage
 
-Add this crate to your `Cargo.toml` alongside `Tokio` and `Serde`.
+Make sure you have [protoc installed.](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation) Add `zeebe-rs` to your `Cargo.toml` alongside `Tokio` and `Serde`.
 
 ```toml
 serde = "1.0.217"
