@@ -550,6 +550,18 @@ impl Client {
         BroadcastSignalRequest::<crate::signal::Initial>::new(self.clone())
     }
 
+    /// Creates a `ResolveIncidentRequest` to resolve an active incident in
+    /// Zeebe.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// client
+    ///     .resolve_incident()
+    ///     .with_incident_key(123456)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn resolve_incident(&self) -> ResolveIncidentRequest<crate::incident::Initial> {
         ResolveIncidentRequest::<crate::incident::Initial>::new(self.clone())
     }
