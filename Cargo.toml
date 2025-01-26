@@ -8,6 +8,7 @@ repository = "https://github.com/Bentebent/zeebe-rs"
 readme = "README.md"
 keywords = ["camunda", "zeebe", "gRPC", "protobuf", "orchestration"]
 categories = ["grpc", "automation", "process orchestration"]
+exclude = [".github/*", ".vscode/*", "doc/*"]
 
 [lib]
 crate-type = ["rlib"]
