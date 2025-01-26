@@ -362,6 +362,18 @@ impl Client {
         TopologyRequest::new(self.clone())
     }
 
+    /// Creates a `DeployResourceRequest` to build a request for deploying a
+    /// resource to Zeebe
+    ///
+    /// # Examples
+    /// ```ignore
+    ///  let result = client
+    ///     .deploy_resource()
+    ///     .with_resource_file(PathBuf::from("./examples/resources/hello_world.bpmn"))
+    ///     .read_resource_files()?
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn deploy_resource(&self) -> DeployResourceRequest<crate::resource::Initial> {
         DeployResourceRequest::<crate::resource::Initial>::new(self.clone())
     }

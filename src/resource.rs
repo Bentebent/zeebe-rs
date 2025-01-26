@@ -3,7 +3,7 @@ use crate::{Client, ClientError};
 use std::path::PathBuf;
 use thiserror::Error;
 
-/// Errors that can occur during resource deployment
+/// Represents errors that can occure while deploying a resource
 #[derive(Error, Debug)]
 pub enum DeployResourceError {
     /// Failed to load resource file from filesystem
@@ -22,8 +22,7 @@ pub enum DeployResourceError {
     },
 }
 
-/// State machine types for deployment workflow
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Initial;
 
 pub struct WithFile;
@@ -48,6 +47,17 @@ impl DeployResourceState for WithDefinition {}
 /// 3. Optionally set tenant ID
 /// 4. Send request
 ///
+/// # Examples
+/// ```ignore
+/// let result = client
+///     .deploy_resource()
+///     .with_resource_file(PathBuf::from("./examples/resources/hello_world.bpmn"))
+///     .read_resource_files()?
+///     .send()
+///     .await?;
+/// ```
+///
+///
 /// # Notes
 /// - Deployment is atomic - all resources succeed or none are deployed
 /// - Resources are validated before deployment
@@ -70,7 +80,6 @@ pub struct DeployResourceRequest<T: DeployResourceState> {
 }
 
 impl<T: DeployResourceState> DeployResourceRequest<T> {
-    /// Creates a new deploy resource request in initial state
     pub(crate) fn new(client: Client) -> DeployResourceRequest<Initial> {
         DeployResourceRequest {
             client,
@@ -81,7 +90,6 @@ impl<T: DeployResourceState> DeployResourceRequest<T> {
         }
     }
 
-    /// Internal helper to transition between states
     fn transition<NewState: DeployResourceState>(self) -> DeployResourceRequest<NewState> {
         DeployResourceRequest {
             client: self.client,
@@ -94,19 +102,35 @@ impl<T: DeployResourceState> DeployResourceRequest<T> {
 }
 
 impl DeployResourceRequest<Initial> {
-    /// Adds a single resource file to deploy
+    /// Adds a single resource file to the deployment request.
+    ///
+    /// This method allows you to specify a single resource file,
+    /// such as a BPMN, DMN, or Form file, to be included in the deployment.
     ///
     /// # Arguments
-    /// * `file_path` - Path to BPMN, DMN or Form file
+    ///
+    /// * `file_path` - A `PathBuf` representing the path to the resource file.
+    ///
+    /// # Returns
+    ///
+    /// A `DeployResourceRequest<WithFile>` instance with the specified resource file added.
     pub fn with_resource_file(mut self, file_path: PathBuf) -> DeployResourceRequest<WithFile> {
         self.resource_file_paths = Some(vec![file_path]);
         self.transition()
     }
 
-    /// Adds multiple resource files to deploy
+    /// Adds multiple resource files to the deployment request.
     ///
-    /// # Arguments  
-    /// * `file_paths` - Paths to BPMN, DMN or Form files
+    /// This method allows you to specify multiple resource files,
+    /// such as BPMN, DMN, or Form files, to be included in the deployment.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_paths` - A `Vec<PathBuf>` containing the paths to the resource files.
+    ///
+    /// # Returns
+    ///
+    /// A `DeployResourceRequest<WithFile>` instance with the specified resource files added.
     pub fn with_resource_files(
         mut self,
         file_paths: Vec<PathBuf>,
@@ -115,11 +139,19 @@ impl DeployResourceRequest<Initial> {
         self.transition()
     }
 
-    /// Adds a single resource definition to deploy
+    /// Adds a single resource definition to the deployment request.
+    ///
+    /// This method allows you to specify a single resource definition,
+    /// including its name and raw content bytes, to be included in the deployment.
     ///
     /// # Arguments
-    /// * `name` - Resource name (e.g. process.bpmn)
-    /// * `definition` - Raw resource content bytes
+    ///
+    /// * `name` - A `String` representing the resource name (e.g., `process.bpmn`).
+    /// * `definition` - A `Vec<u8>` containing the raw content bytes of the resource.
+    ///
+    /// # Returns
+    ///
+    /// A `DeployResourceRequest<WithDefinition>` instance with the specified resource definition added.
     pub fn with_definition(
         mut self,
         name: String,
@@ -129,10 +161,18 @@ impl DeployResourceRequest<Initial> {
         self.transition()
     }
 
-    /// Adds multiple resource definitions to deploy
+    /// Adds multiple resource definitions to the deployment request.
+    ///
+    /// This method allows you to specify multiple resource definitions,
+    /// each including its name and raw content bytes, to be included in the deployment.
     ///
     /// # Arguments
-    /// * `definitions` - List of (name, content) pairs for resources
+    ///
+    /// * `definitions` - A `Vec<(String, Vec<u8>)>` containing pairs of resource names and their raw content bytes.
+    ///
+    /// # Returns
+    ///
+    /// A `DeployResourceRequest<WithDefinition>` instance with the specified resource definitions added.
     pub fn with_definitions(
         mut self,
         mut definitions: Vec<(String, Vec<u8>)>,
@@ -178,34 +218,41 @@ impl DeployResourceRequest<WithFile> {
 }
 
 impl DeployResourceRequest<WithDefinition> {
-    /// Sets the tenant ID that will own the deployed resources
+    /// Sets the tenant ID that will own the deployed resources.
     ///
     /// # Arguments
-    /// * `tenant_id` - ID of tenant that will own these resources
+    ///
+    /// * `tenant_id` - A `String` representing the ID of the tenant that will own these resources.
     ///
     /// # Notes
-    /// - Required when multi-tenancy is enabled
-    /// - Must not be set when multi-tenancy is disabled  
+    ///
+    /// - This field is required when multi-tenancy is enabled.
+    /// - This field must not be set when multi-tenancy is disabled.
     pub fn with_tenant(mut self, tenant_id: String) -> DeployResourceRequest<WithDefinition> {
         self.tenant_id = Some(tenant_id);
         self
     }
 
-    /// Sends the deploy resource request to the gateway
+    /// Sends the deploy resource request to the gateway.
     ///
     /// # Returns
-    /// Response containing:
-    /// - Deployment key
-    /// - List of deployed resources with metadata
-    /// - Tenant ID
+    ///
+    /// A `Result` containing:
+    /// - `Ok(DeployResourceResponse)` on success, which includes:
+    ///   - Deployment key
+    ///   - List of deployed resources with metadata
+    ///   - Tenant ID
+    /// - `Err(ClientError)` on failure, with possible errors:
+    ///   - `PERMISSION_DENIED`: Deployment to an unauthorized tenant.
+    ///   - `INVALID_ARGUMENT`:
+    ///     - No resources provided.
+    ///     - Invalid resource content.
+    ///     - Missing or invalid tenant ID when multi-tenancy is enabled.
+    ///     - Tenant ID provided when multi-tenancy is disabled.
     ///
     /// # Errors
-    /// - PERMISSION_DENIED: Deployment to unauthorized tenant
-    /// - INVALID_ARGUMENT:
-    ///   - No resources provided
-    ///   - Invalid resource content
-    ///   - Missing/invalid tenant ID with multi-tenancy enabled
-    ///   - Tenant ID provided with multi-tenancy disabled
+    ///
+    /// This function will return an error if the request fails due to permission issues or invalid arguments.
     pub async fn send(mut self) -> Result<DeployResourceResponse, ClientError> {
         let resources: Vec<_> = self
             .resource_definitions
@@ -230,50 +277,64 @@ impl DeployResourceRequest<WithDefinition> {
 
 #[derive(Debug, Clone)]
 pub struct ProcessMetadata {
-    /// Process ID that uniquely identifies this process definition
     bpmn_process_id: String,
-    /// Version of this process definition
     version: i32,
-    /// Unique key assigned to this process definition
     process_definition_key: i64,
-    /// Name of resource file this was deployed from
     resource_name: String,
-    /// ID of tenant that owns this process definition
     tenant_id: String,
 }
 
+/// Metadata information for a deployed BPMN process definition.
+///
+/// This struct encapsulates the identifying information and metadata for a process
+/// definition deployed to a Zeebe workflow engine. Each process definition is
+/// uniquely identified by a combination of its BPMN process ID and version number.
 impl ProcessMetadata {
-    /// Returns the process ID that uniquely identifies this process definition
+    /// Returns the BPMN process ID.
     ///
-    /// The ID is defined in the BPMN XML via the 'id' attribute
+    /// # Returns
+    ///
+    /// A string slice representing the BPMN process ID.
     pub fn bpmn_process_id(&self) -> &str {
         &self.bpmn_process_id
     }
 
-    /// Returns the version of this process definition
+    /// Returns the version of this process definition.
     ///
-    /// Version is auto-incremented when deploying a process with same ID
+    /// # Returns
+    ///
+    /// An integer representing the version of the process definition.
     pub fn version(&self) -> i32 {
         self.version
     }
 
-    /// Returns the unique key assigned to this process definition by Zeebe
+    /// Returns the unique key assigned to this process definition by Zeebe.
     ///
-    /// Key is globally unique across the cluster
+    /// # Returns
+    ///
+    /// A 64-bit integer representing the unique key of the process definition.
     pub fn process_definition_key(&self) -> i64 {
         self.process_definition_key
     }
 
-    /// Returns the name of the resource file this was deployed from
+    /// Returns the name of the resource this process was deployed from.
     ///
-    /// Usually ends with .bpmn extension
+    /// # Returns
+    ///
+    /// A string slice representing the name of the resource file.
     pub fn resource_name(&self) -> &str {
         &self.resource_name
     }
 
-    /// Returns the ID of tenant that owns this process definition
+    /// Returns the ID of the tenant that owns this process definition.
     ///
-    /// Empty if multi-tenancy is disabled
+    /// The tenant ID is used in multi-tenant setups to segregate process
+    /// definitions by tenant. If multi-tenancy is disabled, this will be an
+    /// empty string.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the tenant ID.
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
@@ -450,40 +511,50 @@ impl From<proto::DecisionRequirementsMetadata> for DecisionRequirementsMetadata 
 /// Metadata for a deployed form
 #[derive(Debug, Clone)]
 pub struct FormMetadata {
-    /// ID that uniquely identifies this form
     form_id: String,
-    /// Version of this form
     version: i32,
-    /// Unique key assigned by Zeebe
     form_key: i64,
-    /// Name of resource file this was deployed from
     resource_name: String,
-    /// ID of tenant that owns this form
     tenant_id: String,
 }
 
 impl FormMetadata {
-    /// Returns the unique form identifier
+    /// Returns the unique identifier for the form.
+    ///
+    /// # Returns
+    /// A string slice representing the form's unique identifier.
     pub fn form_id(&self) -> &str {
         &self.form_id
     }
 
-    /// Returns this form's version
+    /// Returns the version of the form.
+    ///
+    /// # Returns
+    /// An integer representing the form's version.
     pub fn version(&self) -> i32 {
         self.version
     }
 
-    /// Returns the unique key assigned by Zeebe
+    /// Returns the unique key assigned by Zeebe.
+    ///
+    /// # Returns
+    /// A 64-bit integer representing the unique key.
     pub fn form_key(&self) -> i64 {
         self.form_key
     }
 
-    /// Returns the name of the resource file this was deployed from
+    /// Returns the name of the resource file from which this form was deployed.
+    ///
+    /// # Returns
+    /// A string slice representing the resource file name.
     pub fn resource_name(&self) -> &str {
         &self.resource_name
     }
 
-    /// Returns the ID of the tenant that owns this form
+    /// Returns the ID of the tenant that owns this form.
+    ///
+    /// # Returns
+    /// A string slice representing the tenant's ID.
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
@@ -504,13 +575,9 @@ impl From<proto::FormMetadata> for FormMetadata {
 /// Metadata for a deployed resource
 #[derive(Debug, Clone)]
 pub enum Metadata {
-    /// Metadata for a BPMN process definition
     Process(ProcessMetadata),
-    /// Metadata for a DMN decision
     Decision(DecisionMetadata),
-    /// Metadata for a DMN decision requirements graph
     DecisionRequirements(DecisionRequirementsMetadata),
-    /// Metadata for a form
     Form(FormMetadata),
 }
 
@@ -530,12 +597,15 @@ impl From<proto::deployment::Metadata> for Metadata {
 /// A successfully deployed resource
 #[derive(Debug, Clone)]
 pub struct Deployment {
-    /// Metadata for this deployed resource
     metadata: Option<Metadata>,
 }
 
 impl Deployment {
-    /// Returns the metadata for this deployed resource if available
+    /// Retrieves the metadata associated with this deployed resource, if available.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a reference to the `Metadata` if it exists, or `None` if the metadata is not available.
     pub fn metadata(&self) -> Option<&Metadata> {
         self.metadata.as_ref()
     }
@@ -552,26 +622,35 @@ impl From<proto::Deployment> for Deployment {
 /// Response from deploying one or more resources
 #[derive(Debug, Clone)]
 pub struct DeployResourceResponse {
-    /// Unique key for this deployment operation
     key: i64,
-    /// List of successfully deployed resources
     deployments: Vec<Deployment>,
-    /// ID of tenant that owns these resources
     tenant_id: String,
 }
 
 impl DeployResourceResponse {
-    /// Returns the unique key for this deployment operation
+    /// Returns the unique key associated with this deployment operation.
+    ///
+    /// # Returns
+    ///
+    /// An `i64` representing the unique key.
     pub fn key(&self) -> i64 {
         self.key
     }
 
-    /// Returns the list of successfully deployed resources
-    pub fn deployments(&self) -> &Vec<Deployment> {
+    /// Returns a slice of `Deployment` representing the successfully deployed resources.
+    ///
+    /// # Returns
+    ///
+    /// A slice of `Deployment` structs.
+    pub fn deployments(&self) -> &[Deployment] {
         &self.deployments
     }
 
-    /// Returns the ID of tenant that owns these resources
+    /// Returns the ID of the tenant that owns these resources.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the tenant ID.
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
@@ -587,7 +666,6 @@ impl From<proto::DeployResourceResponse> for DeployResourceResponse {
     }
 }
 
-/// Marker trait for delete resource state machine
 pub trait DeleteResourceRequestState {}
 impl DeleteResourceRequestState for Initial {}
 impl DeleteResourceRequestState for WithKey {}
