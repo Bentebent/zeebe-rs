@@ -31,6 +31,15 @@ pub struct MigrationPlan {
 }
 
 /// Request to migrate a process instance to a different process definition
+/// # Examples
+/// ```ignore
+/// client
+///     .migrate_process_instance()
+///     .with_process_instance_key(12356)
+///     .without_migration_plan()
+///     .send()
+///     .await?; 
+/// ```
 #[derive(Debug, Clone)]
 pub struct MigrateProcessInstanceRequest<T: MigrateProcessInstanceState> {
     client: Client,

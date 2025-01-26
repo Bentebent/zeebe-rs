@@ -1,36 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_19hao6p" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.16.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0">
-  <bpmn:process id="Process_0wspz1k" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_Hello" name="Hello World!">
-      <bpmn:outgoing>Flow_1svzsfk</bpmn:outgoing>
-    </bpmn:startEvent>
+  <bpmn:process id="hello_world" name="Good day" isExecutable="true">
     <bpmn:endEvent id="EndEvent_Goodbye" name="Goodbye World!">
       <bpmn:extensionElements>
         <zeebe:ioMapping>
           <zeebe:output source="=&#34;camunda&#34;" target="hello" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1svzsfk</bpmn:incoming>
+      <bpmn:incoming>Flow_19ek52i</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_1svzsfk" sourceRef="StartEvent_Hello" targetRef="EndEvent_Goodbye" />
+    <bpmn:sequenceFlow id="Flow_1svzsfk" sourceRef="StartEvent_Hello" targetRef="Activity_06so246" />
+    <bpmn:startEvent id="StartEvent_Hello" name="Hello World!">
+      <bpmn:outgoing>Flow_1svzsfk</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1vhiku7" messageRef="Message_23g5pov" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_19ek52i" sourceRef="Activity_06so246" targetRef="EndEvent_Goodbye" />
+    <bpmn:receiveTask id="Activity_06so246" name="Good day World!" messageRef="Message_2kfmhnl">
+      <bpmn:incoming>Flow_1svzsfk</bpmn:incoming>
+      <bpmn:outgoing>Flow_19ek52i</bpmn:outgoing>
+    </bpmn:receiveTask>
   </bpmn:process>
+  <bpmn:message id="Message_23g5pov" name="hello_world" />
+  <bpmn:message id="Message_2kfmhnl" name="hello_message">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=hello" />
+    </bpmn:extensionElements>
+  </bpmn:message>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_0wspz1k">
-      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_Hello">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="hello_world">
+      <bpmndi:BPMNShape id="Event_0klf0w3_di" bpmnElement="StartEvent_Hello">
         <dc:Bounds x="179" y="79" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="167" y="122" width="60" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_1331bs6_di" bpmnElement="EndEvent_Goodbye">
-        <dc:Bounds x="362" y="79" width="36" height="36" />
+        <dc:Bounds x="552" y="79" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="341" y="122" width="80" height="14" />
+          <dc:Bounds x="531" y="122" width="80" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_11uo34z_di" bpmnElement="Activity_06so246">
+        <dc:Bounds x="330" y="57" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1svzsfk_di" bpmnElement="Flow_1svzsfk">
         <di:waypoint x="215" y="97" />
-        <di:waypoint x="362" y="97" />
+        <di:waypoint x="330" y="97" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19ek52i_di" bpmnElement="Flow_19ek52i">
+        <di:waypoint x="430" y="97" />
+        <di:waypoint x="552" y="97" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

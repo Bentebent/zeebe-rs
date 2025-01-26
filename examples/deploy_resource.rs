@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
+use tokio::time::sleep;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct HelloWorld {
@@ -41,13 +42,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:?}", result);
 
     let result = client
-        .create_process_instance()
-        .with_bpmn_process_id(String::from("Process_0wspz1k"))
+        .publish_message()
+        .with_name(String::from("hello_world"))
+        .without_correlation_key()
         .with_variables(HelloWorld {
-            hello: String::from("world"),
+            hello: String::from("foo"),
         })?
-        .with_result(None)
-        .send_with_result::<HelloWorld>()
+        .send()
+        .await?;
+
+    println!("{:?}", result);
+
+    sleep(Duration::from_secs(1)).await;
+
+    let result = client
+        .publish_message()
+        .with_name(String::from("hello_message"))
+        .with_correlation_key(String::from("foo"))
+        .send()
         .await?;
 
     println!("{:?}", result);

@@ -507,6 +507,30 @@ impl Client {
         SetVariablesRequest::<crate::set_variables::Initial>::new(self.clone())
     }
 
+    /// Creates a `PublishMessageRequest` to publish a message to a running
+    /// process instance in Zeebe
+    ///
+    /// # Examples
+    /// ```ignore
+    /// // Publish a message without a correlation key
+    /// client
+    ///     .publish_message()
+    ///     .with_name(String::from("hello_world"))
+    ///     .without_correlation_key()
+    ///     .with_variables(HelloWorld {
+    ///            hello: String::from("foo"),
+    ///      })?
+    ///      .send()
+    ///      .await?;
+    ///
+    /// // Publish a message with a correlation key
+    /// client
+    ///     .publish_message()
+    ///     .with_name(String::from("hello_message"))
+    ///     .with_correlation_key(String::from("foo"))
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn publish_message(&self) -> PublishMessageRequest<crate::message::Initial> {
         PublishMessageRequest::<crate::message::Initial>::new(self.clone())
     }
