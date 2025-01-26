@@ -28,11 +28,11 @@ impl SetVariablesRequestState for WithVariables {}
 ///
 /// ```ignore
 ///
-/// #[derive(Serialize)] 
+/// #[derive(Serialize)]
 /// struct Foo {
 ///     bar: String
 /// }
-/// 
+///
 /// client
 ///     .set_variables()
 ///     .with_element_instance_key(123456)
