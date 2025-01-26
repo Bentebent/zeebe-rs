@@ -581,6 +581,17 @@ impl Client {
         ThrowErrorRequest::<crate::throw_error::Initial>::new(self.clone())
     }
 
+    /// Creates a `EvaluateDecisionRequest` to request the evaluation of a DMN decision
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .evaluate_decision()
+    ///     .with_decision_key(123456)
+    ///     .with_decision_id(String::from("decision_id"))
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn evaluate_decision(&self) -> EvaluateDecisionRequest<crate::decision::Initial> {
         EvaluateDecisionRequest::<crate::decision::Initial>::new(self.clone())
     }
