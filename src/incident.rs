@@ -1,12 +1,8 @@
 use crate::{proto, Client, ClientError};
 
-/// Initial state for incident resolution request builder
 pub struct Initial;
-
-/// State after incident key has been set
 pub struct WithKey;
 
-/// Trait marking valid states for ResolveIncidentRequest
 pub trait ResolveIncidentRequestState {}
 impl ResolveIncidentRequestState for Initial {}
 impl ResolveIncidentRequestState for WithKey {}
@@ -18,11 +14,14 @@ impl ResolveIncidentRequestState for WithKey {}
 /// UpdateJobRetries or SetVariables will be necessary to actually resolve the
 /// underlying problem before calling this.
 ///
-/// # Required fields
-/// - Incident key
-///
-/// # Optional fields  
-/// - Operation reference
+/// # Examples
+/// ```ignore
+/// client
+///     .resolve_incident()
+///     .with_incident_key(123456)
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct ResolveIncidentRequest<T: ResolveIncidentRequestState> {
     client: Client,
@@ -32,7 +31,6 @@ pub struct ResolveIncidentRequest<T: ResolveIncidentRequestState> {
 }
 
 impl<T: ResolveIncidentRequestState> ResolveIncidentRequest<T> {
-    /// Creates a new ResolveIncidentRequest in its initial state
     pub(crate) fn new(client: Client) -> ResolveIncidentRequest<Initial> {
         ResolveIncidentRequest {
             client,
@@ -42,15 +40,6 @@ impl<T: ResolveIncidentRequestState> ResolveIncidentRequest<T> {
         }
     }
 
-    /// Sets a reference key that will be included in all records resulting from this operation
-    ///
-    /// This is an optional identifier that can be used to track the operation across the system.
-    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
-        self.operation_reference = Some(operation_reference);
-        self
-    }
-
-    /// Internal helper to transition between states while preserving fields
     fn transition<NewState: ResolveIncidentRequestState>(self) -> ResolveIncidentRequest<NewState> {
         ResolveIncidentRequest {
             client: self.client,
@@ -68,6 +57,9 @@ impl ResolveIncidentRequest<Initial> {
     ///
     /// # Arguments
     /// * `incident_key` - The unique key identifying the incident to be resolved
+    ///
+    /// # Returns
+    /// The updated `ResolveIncidentRequest` with the incident key set
     pub fn with_incident_key(mut self, incident_key: i64) -> ResolveIncidentRequest<WithKey> {
         self.incident_key = incident_key;
         self.transition()
@@ -96,6 +88,20 @@ impl ResolveIncidentRequest<WithKey> {
             .await?;
 
         Ok(res.into_inner().into())
+    }
+
+    /// Sets a reference key that will be included in all records resulting from this operation
+    ///
+    /// This is an optional identifier that can be used to track the operation across the system.
+    ///
+    /// # Arguments
+    /// * `operation_reference` - The reference key to set
+    ///
+    /// # Returns
+    /// The updated `ResolveIncidentRequest` with the operation reference set
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
     }
 }
 
