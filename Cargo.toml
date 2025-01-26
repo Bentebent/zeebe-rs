@@ -2,6 +2,17 @@
 name = "zeebe-rs"
 version = "0.1.0"
 edition = "2021"
+description = "A gRPC client for interacting with the workflow and decision engine Camunda Zeebe."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Bentebent/zeebe-rs"
+readme = "README.md"
+keywords = ["camunda", "zeebe", "gRPC", "protobuf", "orchestration"]
+categories = ["grpc", "automation", "process orchestration"]
+
+[lib]
+crate-type = ["rlib"]
+name = "zeebe_rs"
+path = "src/lib.rs"
 
 [dependencies]
 oauth2 = "5.0.0"
