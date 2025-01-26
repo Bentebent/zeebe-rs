@@ -1,35 +1,40 @@
 use crate::{proto, Client, ClientError};
 
-/// Initial state for the UpdateJobRetriesRequest builder pattern
 pub struct Initial;
-
-/// State indicating the job key has been set
 pub struct WithKey;
-
-/// State indicating the retries have been set
 pub struct WithRetries;
 
-/// Marker trait for UpdateJobRetriesRequest states
 pub trait UpdateJobRetriesRequestState {}
 impl UpdateJobRetriesRequestState for Initial {}
 impl UpdateJobRetriesRequestState for WithKey {}
 impl UpdateJobRetriesRequestState for WithRetries {}
 
 /// Request to update the number of retries for a job
+///
+/// This struct represents a request to update the number of retries for a
+/// job in Zeebe.
+/// It uses a builder pattern with different states to ensure that the job key
+/// and retries are set before sending the request.
+///
+/// # Examples
+/// ```ignore
+/// client
+///     .update_job_retries()
+///     .with_job_key(123456)
+///     .with_retries(1)
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct UpdateJobRetriesRequest<T: UpdateJobRetriesRequestState> {
     client: Client,
-    /// The unique key identifying the job
     job_key: i64,
-    /// The new number of retries for the job
     retries: i32,
-    /// Optional reference key for tracking the operation
     operation_reference: Option<u64>,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: UpdateJobRetriesRequestState> UpdateJobRetriesRequest<T> {
-    /// Creates a new UpdateJobRetriesRequest in its initial state
     pub(crate) fn new(client: Client) -> UpdateJobRetriesRequest<Initial> {
         UpdateJobRetriesRequest {
             client,
@@ -40,13 +45,6 @@ impl<T: UpdateJobRetriesRequestState> UpdateJobRetriesRequest<T> {
         }
     }
 
-    /// Sets a reference key for tracking this operation
-    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
-        self.operation_reference = Some(operation_reference);
-        self
-    }
-
-    /// Internal helper to transition between builder states
     fn transition<NewState: UpdateJobRetriesRequestState>(
         self,
     ) -> UpdateJobRetriesRequest<NewState> {
@@ -62,6 +60,14 @@ impl<T: UpdateJobRetriesRequestState> UpdateJobRetriesRequest<T> {
 
 impl UpdateJobRetriesRequest<Initial> {
     /// Sets the job key to identify which job to update
+    ///
+    /// # Arguments
+    ///
+    /// * `job_key` - The unique key identifying the job
+    ///
+    /// # Returns
+    ///
+    /// The UpdateJobRetriesRequest in the WithKey state
     pub fn with_job_key(mut self, job_key: i64) -> UpdateJobRetriesRequest<WithKey> {
         self.job_key = job_key;
         self.transition()
@@ -70,6 +76,14 @@ impl UpdateJobRetriesRequest<Initial> {
 
 impl UpdateJobRetriesRequest<WithKey> {
     /// Sets the new number of retries for the job
+    ///
+    /// # Arguments
+    ///
+    /// * `retries` - The new number of retries for the job
+    ///
+    /// # Returns
+    ///
+    /// The UpdateJobRetriesRequest in the WithRetries state
     pub fn with_retries(mut self, retries: i32) -> UpdateJobRetriesRequest<WithRetries> {
         self.retries = retries;
         self.transition()
@@ -77,7 +91,11 @@ impl UpdateJobRetriesRequest<WithKey> {
 }
 
 impl UpdateJobRetriesRequest<WithRetries> {
-    /// Sends the job retries update request to the Zeebe workflow engine
+    /// Sends the job retries update request to Zeebe.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the UpdateJobRetriesResponse if successful, or a ClientError if there was an error
     pub async fn send(mut self) -> Result<UpdateJobRetriesResponse, ClientError> {
         let res = self
             .client
@@ -90,6 +108,20 @@ impl UpdateJobRetriesRequest<WithRetries> {
             .await?;
 
         Ok(res.into_inner().into())
+    }
+
+    /// Sets a reference key for tracking this operation
+    ///
+    /// # Arguments
+    ///
+    /// * `operation_reference` - The reference key to track the operation
+    ///
+    /// # Returns
+    ///
+    /// The updated UpdateJobRetriesRequest with the operation reference set
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
     }
 }
 

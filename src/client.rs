@@ -644,6 +644,19 @@ impl Client {
         UpdateJobTimeoutRequest::<crate::job::update_timeout::Initial>::new(self.clone())
     }
 
+    /// Creates a `UpdateJobRetriesRequest` that updates the number of retries
+    /// for a job in Zeebe.
+    ///
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .update_job_retries()
+    ///     .with_job_key(123456)
+    ///     .with_retries(1)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn update_job_retries(
         &self,
     ) -> UpdateJobRetriesRequest<crate::job::update_retries::Initial> {
