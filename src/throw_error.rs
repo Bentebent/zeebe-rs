@@ -1,15 +1,10 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
 
-// State machine types for enforcing valid request building
-/// Initial state - no fields set
 pub struct Initial;
-/// After setting job key
 pub struct WithKey;
-/// After setting error code
 pub struct WithCode;
 
-/// Marker trait for state machine types
 pub trait ThrowErrorRequestState {}
 impl ThrowErrorRequestState for Initial {}
 impl ThrowErrorRequestState for WithKey {}
@@ -19,22 +14,27 @@ impl ThrowErrorRequestState for WithCode {}
 ///
 /// The error will be caught by an error catch event in the process.
 /// If no matching catch event exists, an incident will be raised instead.
+///
+/// # Examples
+/// ```ignore
+/// client
+///     .throw_error()
+///     .with_job_key(123456)
+///     .with_error_code(String::from("error_code"))
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct ThrowErrorRequest<T: ThrowErrorRequestState> {
     client: Client,
-    /// The unique job identifier from job activation
     job_key: i64,
-    /// Error code that will be matched with an error catch event
     error_code: String,
-    /// Optional message providing additional context
     error_message: String,
-    /// Variables that will be available in the error catch event scope
     variables: serde_json::Value,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: ThrowErrorRequestState> ThrowErrorRequest<T> {
-    /// Creates new throw error request in initial state
     pub(crate) fn new(client: Client) -> ThrowErrorRequest<Initial> {
         ThrowErrorRequest {
             client,
@@ -46,7 +46,6 @@ impl<T: ThrowErrorRequestState> ThrowErrorRequest<T> {
         }
     }
 
-    /// Internal helper to transition between states
     fn transition<NewState: ThrowErrorRequestState>(self) -> ThrowErrorRequest<NewState> {
         ThrowErrorRequest {
             client: self.client,
@@ -64,6 +63,9 @@ impl ThrowErrorRequest<Initial> {
     ///
     /// # Arguments
     /// * `job_key` - Unique job identifier from job activation
+    ///
+    /// # Returns
+    /// A `ThrowErrorRequest` in the `WithKey` state
     pub fn with_job_key(mut self, job_key: i64) -> ThrowErrorRequest<WithKey> {
         self.job_key = job_key;
         self.transition()
@@ -75,6 +77,9 @@ impl ThrowErrorRequest<WithKey> {
     ///
     /// # Arguments
     /// * `error_code` - Code that will be matched with an error catch event in the process
+    ///
+    /// # Returns
+    /// A `ThrowErrorRequest` in the `WithCode` state
     pub fn with_error_code(mut self, error_code: String) -> ThrowErrorRequest<WithCode> {
         self.error_code = error_code;
         self.transition()
@@ -86,6 +91,9 @@ impl ThrowErrorRequest<WithCode> {
     ///
     /// # Arguments
     /// * `error_message` - Additional context about the error
+    ///
+    /// # Returns
+    /// The updated `ThrowErrorRequest` with the error message set
     pub fn with_error_message(mut self, error_message: String) -> Self {
         self.error_message = error_message;
         self
@@ -102,8 +110,10 @@ impl ThrowErrorRequest<WithCode> {
     ///     valid argument, as the root of the JSON document is an array and not an object.
     ///
     /// # Errors
-    /// Returns JsonError if serialization fails
-    /// - INVALID_ARGUMENT: Missing required fields
+    /// Returns `ClientError` if serialization fails
+    ///
+    /// # Returns
+    /// A `Result` containing the updated `ThrowErrorRequest` with the variables set, or a `ClientError`
     pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
         self.variables = serde_json::to_value(data)?;
         Ok(self)
@@ -112,8 +122,11 @@ impl ThrowErrorRequest<WithCode> {
     /// Sends the throw error request to the gateway
     ///
     /// # Errors
-    /// - NOT_FOUND: No job exists with given key
-    /// - FAILED_PRECONDITION: Job is not in activated state
+    /// - `NOT_FOUND`: No job exists with given key
+    /// - `FAILED_PRECONDITION`: Job is not in activated state
+    ///
+    /// # Returns
+    /// A `Result` containing a `ThrowErrorResponse` or a `ClientError`
     pub async fn send(mut self) -> Result<ThrowErrorResponse, ClientError> {
         let res = self
             .client

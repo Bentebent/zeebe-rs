@@ -566,6 +566,17 @@ impl Client {
         ResolveIncidentRequest::<crate::incident::Initial>::new(self.clone())
     }
 
+    /// Creates a `ThrowErrorRequest` to throw a business error
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .throw_error()
+    ///     .with_job_key(123456)
+    ///     .with_error_code(String::from("error_code"))
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn throw_error(&self) -> ThrowErrorRequest<crate::throw_error::Initial> {
         ThrowErrorRequest::<crate::throw_error::Initial>::new(self.clone())
     }
