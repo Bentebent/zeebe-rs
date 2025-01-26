@@ -366,7 +366,7 @@ impl Client {
     }
 
     /// Creates a `DeployResourceRequest` to build a request for deploying a
-    /// resource to Zeebe
+    /// resource to Zeebe.
     ///
     /// # Examples
     /// ```ignore
@@ -486,7 +486,7 @@ impl Client {
         ModifyProcessInstanceRequest::<crate::process_instance::modify::Initial>::new(self.clone())
     }
 
-    /// Creates a `SetVariablesRequest` to update variables for a particular scope
+    /// Creates a `SetVariablesRequest` to update variables for a particular scope.
     ///
     /// # Examples
     /// ```ignore
@@ -508,7 +508,7 @@ impl Client {
     }
 
     /// Creates a `PublishMessageRequest` to publish a message to a running
-    /// process instance in Zeebe
+    /// process instance in Zeebe.
     ///
     /// # Examples
     /// ```ignore
@@ -535,7 +535,7 @@ impl Client {
         PublishMessageRequest::<crate::message::Initial>::new(self.clone())
     }
 
-    /// Creates a `BroadcastSignalRequest` to publish a signal to Zeebe
+    /// Creates a `BroadcastSignalRequest` to publish a signal to Zeebe.
     ///
     /// # Examples
     ///
@@ -566,7 +566,7 @@ impl Client {
         ResolveIncidentRequest::<crate::incident::Initial>::new(self.clone())
     }
 
-    /// Creates a `ThrowErrorRequest` to throw a business error
+    /// Creates a `ThrowErrorRequest` to throw a business error.
     ///
     /// # Examples
     /// ```ignore
@@ -581,7 +581,7 @@ impl Client {
         ThrowErrorRequest::<crate::throw_error::Initial>::new(self.clone())
     }
 
-    /// Creates a `EvaluateDecisionRequest` to request the evaluation of a DMN decision
+    /// Creates a `EvaluateDecisionRequest` to request the evaluation of a DMN decision.
     ///
     /// # Examples
     /// ```ignore
@@ -596,10 +596,32 @@ impl Client {
         EvaluateDecisionRequest::<crate::decision::Initial>::new(self.clone())
     }
 
+    /// Creates a `CompleteJobRequest` to complete a job for a process instance
+    /// in Zeebe.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// client
+    ///     .complete_job()
+    ///     .with_job_key(123456)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn complete_job(&self) -> CompleteJobRequest<crate::job::complete::Initial> {
         CompleteJobRequest::<crate::job::complete::Initial>::new(self.clone())
     }
 
+    /// Creates a `FailJobRequest` to fail a job for a process instance in Zeebe.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .fail_job()
+    ///     .with_job_key(123456)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn fail_job(&self) -> FailJobRequest<crate::job::fail::Initial> {
         FailJobRequest::<crate::job::fail::Initial>::new(self.clone())
     }

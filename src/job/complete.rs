@@ -4,17 +4,11 @@ use serde::Serialize;
 /// Corrections that can be applied when completing a job
 #[derive(Debug, Clone)]
 pub struct JobResultCorrections {
-    /// New assignee for the job
     assignee: Option<String>,
-    /// New due date for the job
     due_date: Option<String>,
-    /// New follow-up date for the job
     follow_up_date: Option<String>,
-    /// New candidate users for the job
     candidate_users: Option<Vec<String>>,
-    /// New candidate groups for the job
     candidate_groups: Option<Vec<String>>,
-    /// New priority for the job
     priority: Option<i32>,
 }
 
@@ -35,7 +29,6 @@ pub struct JobResultBuilder {
 }
 
 impl JobResultBuilder {
-    /// Creates a new JobResultBuilder from a CompleteJobRequest
     fn new(source_request: CompleteJobRequest<WithKey>) -> JobResultBuilder {
         JobResultBuilder {
             source_request,
@@ -44,6 +37,14 @@ impl JobResultBuilder {
     }
 
     /// Sets whether the job completion was denied
+    ///
+    /// # Arguments
+    ///
+    /// * `denied` - A boolean indicating if the job completion was denied
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_denied(mut self, denied: bool) -> Self {
         if let Some(job_result) = self.job_result.as_mut() {
             job_result.denied = Some(denied);
@@ -61,6 +62,10 @@ impl JobResultBuilder {
     ///
     /// Creates default corrections if they don't exist and returns a mutable reference
     /// to allow modifying individual correction fields.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to `JobResultCorrections`
     fn ensure_corrections(&mut self) -> &mut JobResultCorrections {
         if self.job_result.is_none() {
             self.job_result = Some(JobResult {
@@ -94,7 +99,12 @@ impl JobResultBuilder {
     /// Sets a new assignee for the job
     ///
     /// # Arguments
+    ///
     /// * `assignee` - The new assignee to be set for the job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_assignee(mut self, assignee: String) -> Self {
         self.ensure_corrections().assignee = Some(assignee);
         self
@@ -103,7 +113,12 @@ impl JobResultBuilder {
     /// Sets a new due date for the job
     ///
     /// # Arguments
+    ///
     /// * `due_date` - The new due date to be set for the job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_due_date(mut self, due_date: String) -> Self {
         self.ensure_corrections().due_date = Some(due_date);
         self
@@ -112,7 +127,12 @@ impl JobResultBuilder {
     /// Sets a new follow-up date for the job
     ///
     /// # Arguments
+    ///
     /// * `follow_up_date` - The new follow-up date to be set for the job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_follow_up_date(mut self, follow_up_date: String) -> Self {
         self.ensure_corrections().follow_up_date = Some(follow_up_date);
         self
@@ -121,7 +141,12 @@ impl JobResultBuilder {
     /// Sets new candidate users for the job
     ///
     /// # Arguments
+    ///
     /// * `candidate_users` - List of user IDs that are candidates for this job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_candidate_users(mut self, candidate_users: Vec<String>) -> Self {
         self.ensure_corrections().candidate_users = Some(candidate_users);
         self
@@ -130,7 +155,12 @@ impl JobResultBuilder {
     /// Sets new candidate groups for the job
     ///
     /// # Arguments
+    ///
     /// * `candidate_groups` - List of group IDs that are candidates for this job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_candidate_groups(mut self, candidate_groups: Vec<String>) -> Self {
         self.ensure_corrections().candidate_groups = Some(candidate_groups);
         self
@@ -139,7 +169,12 @@ impl JobResultBuilder {
     /// Sets a new priority for the job
     ///
     /// # Arguments
+    ///
     /// * `priority` - The new priority value to be set for the job
+    ///
+    /// # Returns
+    ///
+    /// The updated `JobResultBuilder` instance
     pub fn with_priority(mut self, priority: i32) -> Self {
         self.ensure_corrections().priority = Some(priority);
         self
@@ -148,40 +183,47 @@ impl JobResultBuilder {
     /// Builds the final CompleteJobRequest with the configured job result
     ///
     /// Consumes the builder and returns the configured request ready for sending
+    ///
+    /// # Returns
+    ///
+    /// The configured `CompleteJobRequest<WithKey>` instance
     pub fn build(mut self) -> CompleteJobRequest<WithKey> {
         self.source_request.result = self.job_result;
         self.source_request
     }
 }
 
-/// Initial state for the CompleteJobRequest builder pattern
 #[derive(Debug, Clone)]
 pub struct Initial;
 
-/// State indicating the job key has been set
 #[derive(Debug, Clone)]
 pub struct WithKey;
 
-/// Marker trait for CompleteJobRequest states
 pub trait CompleteJobRequestState {}
 impl CompleteJobRequestState for Initial {}
 impl CompleteJobRequestState for WithKey {}
 
-/// Request to complete a job
+/// Request to complete a job in Zeebe for a process instance
+///
+/// # Examples
+///
+/// ```ignore
+/// client
+///     .complete_job()
+///     .with_job_key(123456)
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct CompleteJobRequest<T: CompleteJobRequestState> {
     client: Client,
-    /// The unique key identifying the job
     job_key: i64,
-    /// Variables to be set when completing the job
     variables: serde_json::Value,
-    /// Optional result including corrections
     result: Option<JobResult>,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: CompleteJobRequestState> CompleteJobRequest<T> {
-    /// Creates a new CompleteJobRequest in its initial state
     pub(crate) fn new(client: Client) -> CompleteJobRequest<Initial> {
         CompleteJobRequest {
             client,
@@ -192,7 +234,6 @@ impl<T: CompleteJobRequestState> CompleteJobRequest<T> {
         }
     }
 
-    /// Internal helper to transition between builder states
     fn transition<NewState: CompleteJobRequestState>(self) -> CompleteJobRequest<NewState> {
         CompleteJobRequest {
             client: self.client,
@@ -206,6 +247,14 @@ impl<T: CompleteJobRequestState> CompleteJobRequest<T> {
 
 impl CompleteJobRequest<Initial> {
     /// Sets the job key to identify which job to complete
+    ///
+    /// # Arguments
+    ///
+    /// * `job_key` - The unique key identifying the job
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `CompleteJobRequest<WithKey>`
     pub fn with_job_key(mut self, job_key: i64) -> CompleteJobRequest<WithKey> {
         self.job_key = job_key;
         self.transition()
@@ -214,17 +263,34 @@ impl CompleteJobRequest<Initial> {
 
 impl CompleteJobRequest<WithKey> {
     /// Sets variables to be included with the job completion
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The variables to be set when completing the job
+    ///
+    /// # Returns
+    ///
+    /// A result containing the updated `CompleteJobRequest<WithKey>` instance or a `ClientError`
     pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
-        self.variables = serde_json::to_value(data)?;
+        self.variables = serde_json::to_value(data)
+            .map_err(|e| ClientError::SerializationFailed { source: e })?;
         Ok(self)
     }
 
     /// Starts building a job result with corrections
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `JobResultBuilder`
     pub fn with_job_result(self) -> JobResultBuilder {
         JobResultBuilder::new(self)
     }
 
     /// Sends the job completion request to the Zeebe workflow engine
+    ///
+    /// # Returns
+    ///
+    /// A result containing the `CompleteJobResponse` or a `ClientError`
     pub async fn send(mut self) -> Result<CompleteJobResponse, ClientError> {
         let res = self
             .client
