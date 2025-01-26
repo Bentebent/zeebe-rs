@@ -4,6 +4,7 @@ version = "0.1.1"
 edition = "2021"
 description = "A gRPC client for interacting with the workflow and decision engine Camunda Zeebe."
 license = "MIT OR Apache-2.0"
+homepage = "https://crates.io/crates/zeebe-rs"
 repository = "https://github.com/Bentebent/zeebe-rs"
 readme = "README.md"
 keywords = ["camunda", "zeebe", "gRPC", "protobuf", "orchestration"]
