@@ -107,7 +107,7 @@ impl CreateProcessInstanceRequest<Initial> {
     /// # Arguments
     ///
     /// * `bpmn_process_id` - The BPMN process ID of the instance to create.
-    /// 
+    ///
     /// # Returns
     ///
     /// A `CreateProcessInstanceRequest<WithProcess>` to continue the request building.
@@ -206,9 +206,9 @@ impl CreateProcessInstanceRequest<WithVariables> {
     ///
     /// # Arguments
     /// * `fetch_variables` - Optional list of variable names to fetch, or None to fetch all
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A `CreateProcessInstanceRequest<WithResult>` to continue the request building.
     pub fn with_result(
         mut self,

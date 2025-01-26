@@ -38,7 +38,7 @@ pub struct MigrationPlan {
 ///     .with_process_instance_key(12356)
 ///     .without_migration_plan()
 ///     .send()
-///     .await?; 
+///     .await?;
 /// ```
 #[derive(Debug, Clone)]
 pub struct MigrateProcessInstanceRequest<T: MigrateProcessInstanceState> {
