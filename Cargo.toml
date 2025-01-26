@@ -11,9 +11,6 @@ keywords = ["camunda", "zeebe", "gRPC", "protobuf", "orchestration"]
 categories = ["api-bindings"]
 exclude = [".github/*", ".vscode/*", "doc/*"]
 
-[package.metadata.docs.rs]
-rustc-args = ["--experimental_allow_proto3_optional"]
-
 [lib]
 crate-type = ["rlib"]
 name = "zeebe_rs"
