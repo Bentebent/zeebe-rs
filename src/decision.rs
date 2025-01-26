@@ -1,7 +1,6 @@
 use crate::{proto, Client, ClientError};
 use serde::{de::DeserializeOwned, Serialize};
 
-// State types for the builder pattern
 pub struct Initial;
 pub struct WithKey;
 pub struct WithId;
@@ -15,24 +14,27 @@ impl EvaluateDecisionRequestState for WithId {}
 /// The decision to evaluate can be specified either by using its unique key
 /// (as returned by DeployResource), or using the decision ID. When using the
 /// decision ID, the latest deployed version of the decision is used.
+///
+/// # Examples
+/// ```ignore
+/// client
+///     .evaluate_decision()
+///     .with_decision_key(123456)
+///     .with_decision_id(String::from("decision_id"))
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct EvaluateDecisionRequest<T: EvaluateDecisionRequestState> {
     client: Client,
-    /// The unique key identifying the decision to be evaluated
     decision_key: i64,
-    /// The ID of the decision to be evaluated
     decision_id: String,
-    /// Variables used for decision evaluation
     variables: serde_json::Value,
-    /// The tenant ID of the decision
     tenant_id: String,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: EvaluateDecisionRequestState> EvaluateDecisionRequest<T> {
-    /// Creates a new EvaluateDecisionRequest in its initial state
-    ///
-    /// This is an internal constructor used by the client to initiate the builder pattern.
     pub(crate) fn new(client: Client) -> EvaluateDecisionRequest<Initial> {
         EvaluateDecisionRequest {
             client,
@@ -44,19 +46,6 @@ impl<T: EvaluateDecisionRequestState> EvaluateDecisionRequest<T> {
         }
     }
 
-    /// Sets the tenant ID for the decision evaluation
-    ///
-    /// # Arguments
-    /// * `tenant_id` - The ID of the tenant that owns the decision
-    pub fn with_tenant_id(mut self, tenant_id: String) -> Self {
-        self.tenant_id = tenant_id;
-        self
-    }
-
-    /// Internal helper to transition between builder states
-    ///
-    /// # Type Parameters
-    /// * `NewState` - The next state in the builder pattern
     fn transition<NewState: EvaluateDecisionRequestState>(
         self,
     ) -> EvaluateDecisionRequest<NewState> {
@@ -76,6 +65,9 @@ impl EvaluateDecisionRequest<Initial> {
     ///
     /// # Arguments
     /// * `decision_key` - The unique key identifying the decision (as returned by DeployResource)
+    ///
+    /// # Returns
+    /// The updated `EvaluateDecisionRequest` in the `WithKey` state.
     pub fn with_decision_key(mut self, decision_key: i64) -> EvaluateDecisionRequest<WithKey> {
         self.decision_key = decision_key;
         self.transition()
@@ -87,6 +79,9 @@ impl EvaluateDecisionRequest<WithKey> {
     ///
     /// # Arguments
     /// * `decision_id` - The ID of the decision to evaluate
+    ///
+    /// # Returns
+    /// The updated `EvaluateDecisionRequest` in the `WithId` state.
     pub fn with_decision_id(mut self, decision_id: String) -> EvaluateDecisionRequest<WithId> {
         self.decision_id = decision_id;
         self.transition()
@@ -98,12 +93,28 @@ impl EvaluateDecisionRequest<WithId> {
     ///
     /// The variables must be a JSON object, as variables will be mapped in a key-value fashion.
     /// For example: `{ "a": 1, "b": 2 }` will create two variables named "a" and "b".
+    ///
+    /// # Arguments
+    /// * `data` - The variables to be used for decision evaluation
+    ///
+    /// # Returns
+    /// The updated `EvaluateDecisionRequest` with the variables set.
+    ///
+    /// # Errors
+    /// Returns a `ClientError` if the variables cannot be serialized to JSON.
     pub fn with_variables<T: Serialize>(mut self, data: T) -> Result<Self, ClientError> {
-        self.variables = serde_json::to_value(data)?;
+        self.variables = serde_json::to_value(data)
+            .map_err(|e| ClientError::SerializationFailed { source: e })?;
         Ok(self)
     }
 
     /// Sends the decision evaluation request
+    ///
+    /// # Type Parameters
+    /// * `T` - The type of the decision output
+    ///
+    /// # Returns
+    /// A `Result` containing the `EvaluateDecisionResponse` or a `ClientError`.
     pub async fn send<T: DeserializeOwned>(
         mut self,
     ) -> Result<EvaluateDecisionResponse<T>, ClientError> {
@@ -120,16 +131,25 @@ impl EvaluateDecisionRequest<WithId> {
 
         res.into_inner().try_into()
     }
+
+    /// Sets the tenant ID for the decision evaluation
+    ///
+    /// # Arguments
+    /// * `tenant_id` - The ID of the tenant that owns the decision
+    ///
+    /// # Returns
+    /// The updated `EvaluateDecisionRequest` with the tenant ID set.
+    pub fn with_tenant_id(mut self, tenant_id: String) -> Self {
+        self.tenant_id = tenant_id;
+        self
+    }
 }
 
 /// Represents an evaluated input in a decision
 #[derive(Debug, Clone)]
 pub struct EvaluatedDecisionInput {
-    /// The ID of the evaluated input
     input_id: String,
-    /// The name of the evaluated input
     input_name: String,
-    /// The value of the evaluated input
     input_value: String,
 }
 
@@ -144,17 +164,26 @@ impl From<proto::EvaluatedDecisionInput> for EvaluatedDecisionInput {
 }
 
 impl EvaluatedDecisionInput {
-    /// Returns the unique identifier of the evaluated input
+    /// Returns the unique identifier of the evaluated input.
+    ///
+    /// # Returns
+    /// A string slice that holds the unique identifier of the evaluated input.
     pub fn input_id(&self) -> &str {
         &self.input_id
     }
 
-    /// Returns the name/label of the evaluated input
+    /// Returns the name/label of the evaluated input.
+    ///
+    /// # Returns
+    /// A string slice that holds the name/label of the evaluated input.
     pub fn input_name(&self) -> &str {
         &self.input_name
     }
 
-    /// Returns the value of the input that was used during decision evaluation
+    /// Returns the value of the input that was used during decision evaluation.
+    ///
+    /// # Returns
+    /// A string slice that holds the value of the input used during decision evaluation.
     pub fn input_value(&self) -> &str {
         &self.input_value
     }
@@ -163,11 +192,8 @@ impl EvaluatedDecisionInput {
 /// Represents an evaluated output in a decision
 #[derive(Debug, Clone)]
 pub struct EvaluatedDecisionOutput {
-    /// The ID of the evaluated output
     output_id: String,
-    /// The name of the evaluated output
     output_name: String,
-    /// The value of the evaluated output
     output_value: String,
 }
 
@@ -182,14 +208,26 @@ impl From<proto::EvaluatedDecisionOutput> for EvaluatedDecisionOutput {
 }
 
 impl EvaluatedDecisionOutput {
+    /// Returns the unique identifier of the evaluated output
+    ///
+    /// # Returns
+    /// A string slice that holds the unique identifier of the evaluated output.
     pub fn output_id(&self) -> &str {
         &self.output_id
     }
 
+    /// Returns the name/label of the evaluated output
+    ///
+    /// # Returns
+    /// A string slice that holds the name/label of the evaluated output.
     pub fn output_name(&self) -> &str {
         &self.output_name
     }
 
+    /// Returns the value of the output that was used during decision evaluation
+    ///
+    /// # Returns
+    /// A string slice that holds the value of the output used during decision evaluation.
     pub fn output_value(&self) -> &str {
         &self.output_value
     }
@@ -198,11 +236,8 @@ impl EvaluatedDecisionOutput {
 /// Represents a matched rule in a decision
 #[derive(Debug, Clone)]
 pub struct MatchedDecisionRule {
-    /// The ID of the matched rule
     rule_id: String,
-    /// The index of the matched rule
     rule_index: i32,
-    /// The evaluated outputs of the matched rule
     evaluated_outputs: Vec<EvaluatedDecisionOutput>,
 }
 
@@ -221,17 +256,26 @@ impl From<proto::MatchedDecisionRule> for MatchedDecisionRule {
 }
 
 impl MatchedDecisionRule {
-    /// Returns the unique identifier of the matched rule
+    /// Returns the unique identifier of the matched rule.
+    ///
+    /// # Returns
+    /// A string slice that holds the unique identifier of the matched rule.
     pub fn rule_id(&self) -> &str {
         &self.rule_id
     }
 
-    /// Returns the index position of the matched rule within the decision table
+    /// Returns the index position of the matched rule within the decision table.
+    ///
+    /// # Returns
+    /// An integer representing the index position of the matched rule.
     pub fn rule_index(&self) -> i32 {
         self.rule_index
     }
 
-    /// Returns a slice containing all evaluated outputs for this matched rule
+    /// Returns a slice containing all evaluated outputs for this matched rule.
+    ///
+    /// # Returns
+    /// A slice of `EvaluatedDecisionOutput` containing all evaluated outputs for this matched rule.
     pub fn evaluated_outputs(&self) -> &[EvaluatedDecisionOutput] {
         &self.evaluated_outputs
     }
@@ -240,23 +284,14 @@ impl MatchedDecisionRule {
 /// Represents an evaluated decision
 #[derive(Debug, Clone)]
 pub struct EvaluatedDecision {
-    /// The unique key identifying the evaluated decision
     decision_key: i64,
-    /// The ID of the evaluated decision
     decision_id: String,
-    /// The name of the evaluated decision
     decision_name: String,
-    /// The version of the evaluated decision
     decision_version: i32,
-    /// The type of the evaluated decision
     decision_type: String,
-    /// The output of the evaluated decision
     decision_output: String,
-    /// The matched rules of the evaluated decision
     matched_rules: Vec<MatchedDecisionRule>,
-    /// The evaluated inputs of the evaluated decision
     evaluated_inputs: Vec<EvaluatedDecisionInput>,
-    /// The tenant ID of the evaluated decision
     tenant_id: String,
 }
 
@@ -282,26 +317,46 @@ impl From<proto::EvaluatedDecision> for EvaluatedDecision {
 
 impl EvaluatedDecision {
     /// Returns the unique key identifying the evaluated decision
+    ///
+    /// # Returns
+    ///
+    /// An `i64` representing the unique key of the evaluated decision
     pub fn decision_key(&self) -> i64 {
         self.decision_key
     }
 
     /// Returns the ID of the decision which was evaluated
+    ///
+    /// # Returns
+    ///
+    /// A string slice (`&str`) representing the ID of the evaluated decision
     pub fn decision_id(&self) -> &str {
         &self.decision_id
     }
 
     /// Returns the name of the decision which was evaluated
+    ///
+    /// # Returns
+    ///
+    /// A string slice (`&str`) representing the name of the evaluated decision
     pub fn decision_name(&self) -> &str {
         &self.decision_name
     }
 
     /// Returns the version of the decision which was evaluated
+    ///
+    /// # Returns
+    ///
+    /// An `i32` representing the version of the evaluated decision
     pub fn decision_version(&self) -> i32 {
         self.decision_version
     }
 
     /// Returns the type of the decision which was evaluated
+    ///
+    /// # Returns
+    ///
+    /// A string slice (`&str`) representing the type of the evaluated decision
     pub fn decision_type(&self) -> &str {
         &self.decision_type
     }
@@ -309,21 +364,37 @@ impl EvaluatedDecision {
     /// Returns the JSON output of the evaluated decision
     ///
     /// The output is a JSON-formatted string representing the decision result
+    ///
+    /// # Returns
     pub fn decision_output(&self) -> &str {
         &self.decision_output
     }
 
+    /// A string slice (`&str`) representing the JSON output of the evaluated decision
+    ///
     /// Returns a slice containing all rules that matched during decision evaluation
+    ///
+    /// # Returns
+    ///
+    /// A slice (`&[MatchedDecisionRule]`) containing all matched rules
     pub fn matched_rules(&self) -> &[MatchedDecisionRule] {
         &self.matched_rules
     }
 
     /// Returns a slice containing all inputs that were evaluated as part of the decision
+    ///
+    /// # Returns
+    ///
+    /// A slice (`&[EvaluatedDecisionInput]`) containing all evaluated inputs
     pub fn evaluated_inputs(&self) -> &[EvaluatedDecisionInput] {
         &self.evaluated_inputs
     }
 
     /// Returns the tenant identifier of the evaluated decision
+    ///
+    /// # Returns
+    ///
+    /// A string slice (`&str`) representing the tenant identifier of the evaluated decision
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
@@ -332,29 +403,17 @@ impl EvaluatedDecision {
 /// The response from evaluating a decision
 #[derive(Debug, Clone)]
 pub struct EvaluateDecisionResponse<T: DeserializeOwned> {
-    /// The unique key identifying the evaluated decision
     decision_key: i64,
-    /// The ID of the evaluated decision
     decision_id: String,
-    /// The name of the evaluated decision
     decision_name: String,
-    /// The version of the evaluated decision
     decision_version: i32,
-    /// The ID of the decision requirements graph that the decision is part of
     decision_requirements_id: String,
-    /// The unique key of the decision requirements graph
     decision_requirements_key: i64,
-    /// The output of the decision evaluation
     decision_output: T,
-    /// List of all decisions that were evaluated
     evaluated_decisions: Vec<EvaluatedDecision>,
-    /// The ID of the decision that failed during evaluation, if any
     failed_decision_id: String,
-    /// Message describing why the decision evaluation failed, if applicable
     failure_message: String,
-    /// The tenant ID of the evaluated decision
     tenant_id: String,
-    /// The unique key identifying this decision evaluation
     decision_instance_key: i64,
 }
 
@@ -370,7 +429,12 @@ impl<T: DeserializeOwned> TryFrom<proto::EvaluateDecisionResponse> for EvaluateD
             decision_version: value.decision_version,
             decision_requirements_id: value.decision_requirements_id,
             decision_requirements_key: value.decision_requirements_key,
-            decision_output: serde_json::from_str(&value.decision_output)?,
+            decision_output: serde_json::from_str(&value.decision_output).map_err(|e| {
+                ClientError::DeserializationFailed {
+                    value: value.decision_output.clone(),
+                    source: e,
+                }
+            })?,
             evaluated_decisions: value
                 .evaluated_decisions
                 .into_iter()
@@ -384,63 +448,116 @@ impl<T: DeserializeOwned> TryFrom<proto::EvaluateDecisionResponse> for EvaluateD
     }
 }
 
+/// Represents the response of evaluating a decision, parameterized by the type `T`.
+///
+/// This struct provides various methods to access details about the evaluated decision,
+/// including its key, ID, name, version, and output, as well as information about any
+/// failures that occurred during the evaluation.
 impl<T: DeserializeOwned> EvaluateDecisionResponse<T> {
-    /// Returns the unique key identifying the evaluated decision
+    /// Returns the unique key identifying the evaluated decision.
+    ///
+    /// # Returns
+    ///
+    /// An `i64` representing the unique key of the decision.
     pub fn decision_key(&self) -> i64 {
         self.decision_key
     }
 
-    /// Returns the ID of the decision which was evaluated
+    /// Returns the ID of the decision which was evaluated.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the ID of the evaluated decision.
     pub fn decision_id(&self) -> &str {
         &self.decision_id
     }
 
-    /// Returns the name of the decision which was evaluated
+    /// Returns the name of the decision which was evaluated.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the name of the evaluated decision.
     pub fn decision_name(&self) -> &str {
         &self.decision_name
     }
 
-    /// Returns the version of the decision which was evaluated
+    /// Returns the version of the decision which was evaluated.
+    ///
+    /// # Returns
+    ///
+    /// An `i32` representing the version of the evaluated decision.
     pub fn decision_version(&self) -> i32 {
         self.decision_version
     }
 
-    /// Returns the ID of the decision requirements graph that the decision is part of
+    /// Returns the ID of the decision requirements graph that the decision is part of.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the ID of the decision requirements graph.
     pub fn decision_requirements_id(&self) -> &str {
         &self.decision_requirements_id
     }
 
-    /// Returns the unique key identifying the decision requirements graph
+    /// Returns the unique key identifying the decision requirements graph.
+    ///
+    /// # Returns
+    ///
+    /// An `i64` representing the unique key of the decision requirements graph.
     pub fn decision_requirements_key(&self) -> i64 {
         self.decision_requirements_key
     }
 
-    /// Returns the output result of the decision evaluation
+    /// Returns the output result of the decision evaluation.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the output of the decision evaluation of type `T`.
     pub fn decision_output(&self) -> &T {
         &self.decision_output
     }
 
-    /// Returns a list of all decisions that were evaluated within the requested decision evaluation
+    /// Returns a list of all decisions that were evaluated within the requested decision evaluation.
+    ///
+    /// # Returns
+    ///
+    /// A slice of `EvaluatedDecision` representing all evaluated decisions.
     pub fn evaluated_decisions(&self) -> &[EvaluatedDecision] {
         &self.evaluated_decisions
     }
 
-    /// Returns the ID of the decision which failed during evaluation, if any
+    /// Returns the ID of the decision which failed during evaluation, if any.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the ID of the failed decision, if applicable.
     pub fn failed_decision_id(&self) -> &str {
         &self.failed_decision_id
     }
 
-    /// Returns a message describing why the decision evaluation failed, if applicable
+    /// Returns a message describing why the decision evaluation failed, if applicable.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the failure message, if applicable.
     pub fn failure_message(&self) -> &str {
         &self.failure_message
     }
 
-    /// Returns the tenant identifier of the evaluated decision
+    /// Returns the tenant identifier of the evaluated decision.
+    ///
+    /// # Returns
+    ///
+    /// A string slice representing the tenant ID of the evaluated decision.
     pub fn tenant_id(&self) -> &str {
         &self.tenant_id
     }
 
-    /// Returns the unique key identifying this decision evaluation
+    /// Returns the unique key identifying this decision evaluation.
+    ///
+    /// # Returns
+    ///
+    /// An `i64` representing the unique key of this decision evaluation.
     pub fn decision_instance_key(&self) -> i64 {
         self.decision_instance_key
     }
