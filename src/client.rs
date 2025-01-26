@@ -397,7 +397,7 @@ impl Client {
         DeleteResourceRequest::<crate::resource::Initial>::new(self.clone())
     }
 
-    /// Creates a `CrateProcessInstanceRequest` to build a request for creating
+    /// Creates a `CreateProcessInstanceRequest` to build a request for creating
     /// a process instance in Zeebe.
     /// # Examples
     ///
@@ -425,6 +425,19 @@ impl Client {
         CreateProcessInstanceRequest::<crate::process_instance::create::Initial>::new(self.clone())
     }
 
+    /// Creates a `CancelProcessInstanceRequest` to cancel an active
+    /// process instance in Zeebe.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// client
+    ///     .cancel_process_instance()
+    ///     .with_process_instance_key(123456)
+    ///     .send()
+    ///     .await?;
+    /// ```
+    ///
     pub fn cancel_process_instance(
         &self,
     ) -> CancelProcessInstanceRequest<crate::process_instance::cancel::Initial> {

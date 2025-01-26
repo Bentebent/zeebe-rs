@@ -16,21 +16,27 @@ impl CancelProcessInstanceState for Initial {}
 impl CancelProcessInstanceState for WithProcessInstance {}
 
 /// Request to cancel a running process instance
+/// # Examples
+///
+/// ```
+/// client
+///     .cancel_process_instance()
+///     .with_process_instance_key(123456)
+///     .send()
+///     .await?;
+/// ```
 ///
 /// Errors:
 /// - NOT_FOUND: no process instance exists with the given key
 #[derive(Debug, Clone)]
 pub struct CancelProcessInstanceRequest<T: CancelProcessInstanceState> {
     client: Client,
-    /// The unique key identifying the process instance to cancel
     process_instance_key: i64,
-    /// Optional reference key for tracking this operation
     operation_reference: Option<u64>,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: CancelProcessInstanceState> CancelProcessInstanceRequest<T> {
-    /// Creates a new CancelProcessInstanceRequest in its initial state
     pub(crate) fn new(client: Client) -> CancelProcessInstanceRequest<Initial> {
         CancelProcessInstanceRequest {
             client,
@@ -40,7 +46,6 @@ impl<T: CancelProcessInstanceState> CancelProcessInstanceRequest<T> {
         }
     }
 
-    /// Internal helper to transition between builder states
     fn transition<NewState: CancelProcessInstanceState>(
         self,
     ) -> CancelProcessInstanceRequest<NewState> {
@@ -51,16 +56,18 @@ impl<T: CancelProcessInstanceState> CancelProcessInstanceRequest<T> {
             _state: std::marker::PhantomData,
         }
     }
-
-    /// Sets a reference key for tracking this operation
-    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
-        self.operation_reference = Some(operation_reference);
-        self
-    }
 }
 
 impl CancelProcessInstanceRequest<Initial> {
     /// Sets the process instance key identifying which instance to cancel
+    ///
+    /// # Arguments
+    ///
+    /// * `process_instance_key` - The unique key identifying the process instance to cancel
+    ///
+    /// # Returns
+    ///
+    /// A new CancelProcessInstanceRequest in the WithProcessInstance state
     pub fn with_process_instance_key(
         mut self,
         process_instance_key: i64,
@@ -72,6 +79,10 @@ impl CancelProcessInstanceRequest<Initial> {
 
 impl CancelProcessInstanceRequest<WithProcessInstance> {
     /// Sends the process instance cancellation request to the Zeebe workflow engine
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the CancelProcessInstanceResponse if successful, or a ClientError if not
     pub async fn send(mut self) -> Result<CancelProcessInstanceResponse, ClientError> {
         let res = self
             .client
@@ -84,9 +95,23 @@ impl CancelProcessInstanceRequest<WithProcessInstance> {
 
         Ok(res.into_inner().into())
     }
+
+    /// Sets a reference key for tracking this operation
+    ///
+    /// # Arguments
+    ///
+    /// * `operation_reference` - The reference key for tracking the operation
+    ///
+    /// # Returns
+    ///
+    /// The updated CancelProcessInstanceRequest with the operation reference set
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
+    }
 }
 
-/// Response from canceling a process instance
+/// Empty response from canceling a process instance
 #[derive(Debug, Clone)]
 pub struct CancelProcessInstanceResponse {}
 
