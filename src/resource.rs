@@ -41,12 +41,6 @@ impl DeployResourceState for WithDefinition {}
 /// - DMN decision tables
 /// - Custom forms
 ///
-/// # State Machine Flow
-/// 1. Create request with client
-/// 2. Add resources via files or definitions
-/// 3. Optionally set tenant ID
-/// 4. Send request
-///
 /// # Examples
 /// ```ignore
 /// let result = client
@@ -670,16 +664,26 @@ pub trait DeleteResourceRequestState {}
 impl DeleteResourceRequestState for Initial {}
 impl DeleteResourceRequestState for WithKey {}
 
-/// Request to delete a deployed resource (process, decision, or form)
+/// Request to delete a deployed resource in Zeebe
 ///
-/// # Effects
-/// - Process deletion cancels running instances
-/// - New instances use latest non-deleted version
-/// - No instances possible when all versions deleted
-/// - Decision deletion may cause incidents
+/// # Examples
+///
+/// ```ignore
+/// let response = client
+///     .delete_resource()
+///     .with_resource_key(12345)
+///     .send()
+///     .await?;
+/// ```
 ///
 /// # Errors
-/// - NOT_FOUND: No resource exists with given key
+///
+/// Sending a delete request may result in the following errors:
+/// - `NOT_FOUND`: No resource exists with the given key.
+///
+/// # Notes
+///
+/// The delete resource operation is fire-and-forget, meaning there is no detailed response.
 #[derive(Debug, Clone)]
 pub struct DeleteResourceRequest<T> {
     client: Client,
@@ -689,7 +693,6 @@ pub struct DeleteResourceRequest<T> {
 }
 
 impl<T: DeleteResourceRequestState> DeleteResourceRequest<T> {
-    /// Creates new delete resource request in initial state
     pub(crate) fn new(client: Client) -> DeleteResourceRequest<Initial> {
         DeleteResourceRequest {
             client,
@@ -699,16 +702,6 @@ impl<T: DeleteResourceRequestState> DeleteResourceRequest<T> {
         }
     }
 
-    /// Sets a reference ID to correlate this operation with other events
-    ///
-    /// # Arguments
-    /// * `operation_reference` - Unique identifier for correlation
-    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
-        self.operation_reference = Some(operation_reference);
-        self
-    }
-
-    /// Internal helper to transition between states
     fn transition<NewState: DeleteResourceRequestState>(self) -> DeleteResourceRequest<NewState> {
         DeleteResourceRequest {
             client: self.client,
@@ -746,6 +739,15 @@ impl DeleteResourceRequest<WithKey> {
             .await?;
 
         Ok(res.into_inner().into())
+    }
+
+    /// Sets a reference ID to correlate this operation with other events
+    ///
+    /// # Arguments
+    /// * `operation_reference` - Unique identifier for correlation
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
     }
 }
 
