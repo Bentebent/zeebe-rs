@@ -626,6 +626,18 @@ impl Client {
         FailJobRequest::<crate::job::fail::Initial>::new(self.clone())
     }
 
+    /// Creates a `UpdateJobTimeoutRequest` to update the timeout for a running
+    /// job in Zeebe.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .update_job_timeout()
+    ///     .with_job_key(123456)
+    ///     .with_timeout(Duration::from_secs(10))
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn update_job_timeout(
         &self,
     ) -> UpdateJobTimeoutRequest<crate::job::update_timeout::Initial> {
