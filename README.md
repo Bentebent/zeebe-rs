@@ -13,7 +13,7 @@ Add this crate to your `Cargo.toml` alongside `Tokio` and `Serde`.
 ```toml
 serde = "1.0.217"
 tokio = "1.43.0"
-zeebe-rs = "1.0.0"
+zeebe-rs = "0.1.0"
 ```
 
 `zeebe-rs` uses the builder pattern together with type states extensively to guarantee that requests to Zeebe contain all required information. The client supports type safe conversions of data to and from Zeebe with `Serde`.
