@@ -486,6 +486,23 @@ impl Client {
         ModifyProcessInstanceRequest::<crate::process_instance::modify::Initial>::new(self.clone())
     }
 
+    /// Creates a `SetVariablesRequest` to update variables for a particular scope
+    ///
+    /// # Examples
+    /// ```ignore
+    ///
+    /// #[derive(Serialize)]
+    /// struct Foo {
+    ///     bar: String
+    /// }
+    ///
+    /// client
+    ///     .set_variables()
+    ///     .with_element_instance_key(123456)
+    ///     .with_variable(Foo {bar: String::from("foobar")})
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn set_variables(&self) -> SetVariablesRequest<crate::set_variables::Initial> {
         SetVariablesRequest::<crate::set_variables::Initial>::new(self.clone())
     }
