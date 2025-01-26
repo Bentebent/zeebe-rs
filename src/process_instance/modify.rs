@@ -1,15 +1,12 @@
 use crate::{proto, Client, ClientError};
 use serde::Serialize;
 
-/// Initial state for the ModifyProcessInstanceRequest builder pattern
 #[derive(Debug, Clone)]
 pub struct Initial;
 
-/// State indicating process instance key has been set
 #[derive(Debug, Clone)]
 pub struct WithProcessInstance;
 
-/// Marker trait for ModifyProcessInstanceRequest states
 pub trait ModifyProcessInstanceState {}
 impl ModifyProcessInstanceState for Initial {}
 impl ModifyProcessInstanceState for WithProcessInstance {}
@@ -17,45 +14,34 @@ impl ModifyProcessInstanceState for WithProcessInstance {}
 /// Instruction to terminate a specific element instance
 #[derive(Debug, Clone)]
 pub struct TerminateInstruction {
-    /// The unique key of the element instance to terminate
     element_instance_key: i64,
 }
 
 /// Instruction to set variables in a specific scope
 #[derive(Debug, Clone)]
 pub struct VariableInstruction {
-    /// Variables to set as JSON document
     variables: serde_json::Value,
-    /// ID of the element scope for the variables
     scope_id: String,
 }
 
 /// Instruction to activate a specific element
 #[derive(Debug, Clone)]
 pub struct ActivateInstruction {
-    /// ID of the element to activate
     element_id: String,
-    /// Key of the ancestor scope to create the element instance in
     ancestor_element_instance_key: i64,
-    /// Variable instructions for the new element instance
     variable_instructions: Vec<VariableInstruction>,
 }
 
 /// Builder for constructing element activation instructions
 #[derive(Debug, Clone)]
 pub struct ActivateInstructionBuilder {
-    /// Source request being built
     source_request: ModifyProcessInstanceRequest<WithProcessInstance>,
-    /// ID of element to activate
     element_id: String,
-    /// Key of ancestor scope
     ancestor_element_instance_key: i64,
-    /// Variable instructions
     variable_instructions: Vec<VariableInstruction>,
 }
 
 impl ActivateInstructionBuilder {
-    /// Creates a new activation instruction builder
     fn new(
         source_request: ModifyProcessInstanceRequest<WithProcessInstance>,
         element_id: String,
@@ -74,6 +60,9 @@ impl ActivateInstructionBuilder {
     /// # Arguments
     /// * `scope_id` - ID of the element scope for the variables
     /// * `data` - Variables to set in the scope
+    ///
+    /// # Errors
+    /// Returns `ClientError` if serialization of `data` fails
     pub fn with_variable_instruction<T: Serialize>(
         mut self,
         scope_id: String,
@@ -100,22 +89,40 @@ impl ActivateInstructionBuilder {
 }
 
 /// Request to modify a process instance by activating/terminating elements
+///
+/// This struct represents a request to modify a process instance in the Zeebe workflow engine.
+/// It allows for building and sending instructions to activate specific elements or terminate
+/// specific element instances within a process instance.
+///
+/// The request goes through different states during its construction:
+/// - `Initial`: The initial state where the process instance key is not yet set.
+/// - `WithProcessInstance`: The state where the process instance key is set, and instructions can be added.
+///
+/// # Example
+///
+/// ```ignore
+/// client
+///     .modify_process_instance()
+///     .with_process_instance_key(12345)
+///         .with_activate_instruction("element_id".to_string(), 67890)
+///         .with_variable_instruction("scope_id".to_string(), serde_json::json!({"key": "value"}))?
+///         .build()
+///     .with_terminate_instruction(54321)
+///     .with_operation_reference(98765)
+///     .send()
+///     .await?;
+/// ```
 #[derive(Debug, Clone)]
 pub struct ModifyProcessInstanceRequest<T: ModifyProcessInstanceState> {
     client: Client,
-    /// Key of the process instance to modify
     process_instance_key: i64,
-    /// Instructions for activating elements
     activate_instructions: Vec<ActivateInstruction>,
-    /// Instructions for terminating elements  
     terminate_instructions: Vec<TerminateInstruction>,
-    /// Optional reference key for tracking
     operation_reference: Option<u64>,
     _state: std::marker::PhantomData<T>,
 }
 
 impl<T: ModifyProcessInstanceState> ModifyProcessInstanceRequest<T> {
-    /// Creates a new ModifyProcessInstanceRequest in its initial state
     pub(crate) fn new(client: Client) -> ModifyProcessInstanceRequest<Initial> {
         ModifyProcessInstanceRequest {
             client,
@@ -127,13 +134,6 @@ impl<T: ModifyProcessInstanceState> ModifyProcessInstanceRequest<T> {
         }
     }
 
-    /// Sets a reference key for tracking this operation
-    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
-        self.operation_reference = Some(operation_reference);
-        self
-    }
-
-    /// Internal helper to transition between builder states
     fn transition<NewState: ModifyProcessInstanceState>(
         self,
     ) -> ModifyProcessInstanceRequest<NewState> {
@@ -150,6 +150,14 @@ impl<T: ModifyProcessInstanceState> ModifyProcessInstanceRequest<T> {
 
 impl ModifyProcessInstanceRequest<Initial> {
     /// Sets the process instance key identifying which instance to modify
+    ///
+    /// # Arguments
+    ///
+    /// * `process_instance_key` - The key of the process instance to modify
+    ///
+    /// # Returns
+    ///
+    /// A `ModifyProcessInstanceRequest<WithProcessInstance>` with the process instance key set
     pub fn with_process_instance_key(
         mut self,
         process_instance_key: i64,
@@ -165,6 +173,9 @@ impl ModifyProcessInstanceRequest<WithProcessInstance> {
     /// # Arguments
     /// * `element_id` - ID of the element to activate
     /// * `ancestor_element_instance_key` - Key of the ancestor scope
+    ///
+    /// # Returns
+    /// An `ActivateInstructionBuilder` instance to further build the instruction.
     pub fn with_activate_instruction(
         self,
         element_id: String,
@@ -177,6 +188,9 @@ impl ModifyProcessInstanceRequest<WithProcessInstance> {
     ///
     /// # Arguments
     /// * `element_instance_key` - Key of the element instance to terminate
+    ///
+    /// # Returns
+    /// The modified `ModifyProcessInstanceRequest` instance.
     pub fn with_terminate_instruction(mut self, element_instance_key: i64) -> Self {
         self.terminate_instructions.push(TerminateInstruction {
             element_instance_key,
@@ -188,6 +202,9 @@ impl ModifyProcessInstanceRequest<WithProcessInstance> {
     ///
     /// # Arguments
     /// * `element_instance_keys` - Keys of element instances to terminate
+    ///
+    /// # Returns
+    /// The modified `ModifyProcessInstanceRequest` instance.
     pub fn with_terminate_instructions(mut self, element_instance_keys: Vec<i64>) -> Self {
         self.terminate_instructions
             .extend(
@@ -205,6 +222,9 @@ impl ModifyProcessInstanceRequest<WithProcessInstance> {
     /// # Errors
     /// - NOT_FOUND: No process instance exists with the given key
     /// - INVALID_ARGUMENT: Invalid instructions or variables provided
+    ///
+    /// # Returns
+    /// A `Result` containing `ModifyProcessInstanceResponse` on success or `ClientError` on failure.
     pub async fn send(mut self) -> Result<ModifyProcessInstanceResponse, ClientError> {
         let res = self
             .client
@@ -245,6 +265,18 @@ impl ModifyProcessInstanceRequest<WithProcessInstance> {
             .await?;
 
         Ok(res.into_inner().into())
+    }
+
+    /// Sets a reference key for tracking this operation
+    ///
+    /// # Arguments
+    /// * `operation_reference` - The reference key for tracking
+    ///
+    /// # Returns
+    /// The modified `ModifyProcessInstanceRequest` instance.
+    pub fn with_operation_reference(mut self, operation_reference: u64) -> Self {
+        self.operation_reference = Some(operation_reference);
+        self
     }
 }
 

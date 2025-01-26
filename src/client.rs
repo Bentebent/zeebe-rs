@@ -464,6 +464,22 @@ impl Client {
         )
     }
 
+    /// Creates a `ModifyProcessInstanceRequest` to modify a running process
+    /// instance in Zeebe.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// client
+    ///     .modify_process_instance()
+    ///     .with_process_instance_key(12345)
+    ///         .with_activate_instruction("element_id".to_string(), 67890)
+    ///         .with_variable_instruction("scope_id".to_string(), serde_json::json!({"key": "value"}))?
+    ///         .build()
+    ///     .with_terminate_instruction(54321)
+    ///     .with_operation_reference(98765)
+    ///     .send()
+    ///     .await?;
+    /// ```
     pub fn modify_process_instance(
         &self,
     ) -> ModifyProcessInstanceRequest<crate::process_instance::modify::Initial> {
