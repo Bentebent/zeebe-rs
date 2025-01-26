@@ -19,6 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install Rust toolchain
         run: |
           rustup update --no-self-update stable nightly
@@ -49,8 +57,25 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::error::CARGO_REGISTRY_TOKEN is not set!"
+            exit 1
+          fi
+
           cargo login $CARGO_REGISTRY_TOKEN
+
+      - name: Validate version
+        run: |
+          VERSION=$(echo $GITHUB_REF | cut -d "/" -f3 | sed 's/^v//')
+          CARGO_VERSION=$(cargo metadata --format-version=1 | jq -r '.packages[0].version')
+
+          echo "Tag version: $VERSION, Cargo.toml version: $CARGO_VERSION"
+          if [ "$VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Version mismatch: tag is $VERSION but Cargo.toml version is $CARGO_VERSION"
+            exit 1
+          fi
 
       - name: Publish
         run: |
+          cargo package
           cargo publish --dry-run
