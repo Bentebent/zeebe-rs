@@ -317,8 +317,8 @@ impl CreateProcessInstanceRequest<WithResult> {
     }
 }
 
-/// Response from creating a process instance
 #[derive(Debug, Clone)]
+/// Response from creating a process instance
 pub struct CreateProcessInstanceResponse {
     process_definition_key: i64,
     bpmn_process_id: String,

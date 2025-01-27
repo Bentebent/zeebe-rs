@@ -356,6 +356,7 @@ impl WorkerBuilder<WithHandler> {
             self.client,
             request,
             self.request_timeout,
+            self.concurrency_limit,
             self.worker_callback
                 .expect("Don't transition to build without handler"),
         )
@@ -577,7 +578,6 @@ impl WorkProducer {
             })
             .await
             {
-                println!("Error when fetching jobs: {:?}", err);
             };
 
             let _ = poll_tx.send(PollingMessage::FetchJobsComplete).await;
@@ -708,6 +708,7 @@ impl Worker {
         client: Client,
         request: proto::ActivateJobsRequest,
         request_timeout: Duration,
+        concurrency_limit: u32,
         callback: Arc<Box<dyn JobHandler>>,
     ) -> Worker {
         let (job_tx, job_rx) = mpsc::channel(32);
@@ -730,7 +731,7 @@ impl Worker {
             client: client.clone(),
             job_rx,
             poll_tx: poll_tx.clone(),
-            semaphore: Arc::new(Semaphore::new(1)),
+            semaphore: Arc::new(Semaphore::new(concurrency_limit as usize)),
             worker_callback: callback,
         };
 
