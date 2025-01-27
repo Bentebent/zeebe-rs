@@ -45,6 +45,11 @@ pub use process_instance::{
     },
     modify::{ModifyProcessInstanceRequest, ModifyProcessInstanceResponse},
 };
+pub use resource::{
+    DecisionMetadata, DecisionRequirementsMetadata, DeleteResourceRequest, DeleteResourceResponse,
+    DeployResourceError, DeployResourceRequest, DeployResourceResponse, Deployment, FormMetadata,
+    Metadata,
+};
 pub use set_variables::{SetVariablesRequest, SetVariablesResponse};
 pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse};
 pub use throw_error::{ThrowErrorRequest, ThrowErrorResponse};
