@@ -130,38 +130,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         items: initial_stock,
     })));
 
+    // We can reuse the worker builder for sharing some configurations
+    let base_worker = client
+        .worker()
+        .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10));
+
     // This will share the stock among all the workers confirming orders
     // counting it down for each order.
-    let confirm_worker = client
-        .worker()
-        .with_job_type(String::from("confirm_order"))
-        .with_job_timeout(Duration::from_secs(10))
-        .with_request_timeout(Duration::from_secs(10))
+    let confirm_worker = base_worker
+        .clone()
         .with_max_jobs_to_activate(4)
         .with_concurrency_limit(2)
+        .with_job_type(String::from("confirm_order"))
         .with_state(stock)
         .with_handler(confirm_order)
         .with_fetch_variable(String::from("items"))
         .build();
 
-    let bake_worker = client
-        .worker()
-        .with_job_type(String::from("bake_pizzas"))
-        .with_job_timeout(Duration::from_secs(10))
-        .with_request_timeout(Duration::from_secs(10))
+    let bake_worker = base_worker
+        .clone()
         .with_max_jobs_to_activate(10)
         .with_concurrency_limit(10)
+        .with_job_type(String::from("bake_pizzas"))
         .with_handler(bake_pizzas)
         .build();
 
     // Handler can be both function callbacks or closures
     let reject_order_worker = client
         .worker()
-        .with_job_type(String::from("reject_order"))
-        .with_job_timeout(Duration::from_secs(10))
         .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10))
         .with_max_jobs_to_activate(5)
         .with_concurrency_limit(5)
+        .with_job_type(String::from("reject_order"))
         .with_handler(|client, job| async move {
             let _ = client.complete_job().with_job_key(job.key()).send().await;
         })
@@ -169,21 +171,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let deliver_worker = client
         .worker()
-        .with_job_type(String::from("deliver_order"))
-        .with_job_timeout(Duration::from_secs(10))
         .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10))
         .with_max_jobs_to_activate(1)
         .with_concurrency_limit(1)
+        .with_job_type(String::from("deliver_order"))
         .with_handler(deliver_order)
         .build();
 
     let clarify_address_worker = client
         .worker()
-        .with_job_type(String::from("call_customer"))
-        .with_job_timeout(Duration::from_secs(10))
         .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10))
         .with_max_jobs_to_activate(5)
         .with_concurrency_limit(5)
+        .with_job_type(String::from("call_customer"))
         .with_handler(|client, job| async move {
             let mut customer = job.data::<Customer>().unwrap();
 

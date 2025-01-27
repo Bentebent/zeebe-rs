@@ -65,12 +65,25 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct Initial {}
+
+#[derive(Clone)]
 pub struct WithJobType {}
+
+#[derive(Clone)]
 pub struct WithTimeout {}
+
+#[derive(Clone)]
 pub struct WithRequestTimeout {}
+
+#[derive(Clone)]
 pub struct WithMaxJobs {}
+
+#[derive(Clone)]
 pub struct WithConcurrency {}
+
+#[derive(Clone)]
 pub struct WithHandler {}
 
 pub trait WorkerBuilderState {}
@@ -83,6 +96,7 @@ impl WorkerBuilderState for WithMaxJobs {}
 impl WorkerBuilderState for WithConcurrency {}
 impl WorkerBuilderState for WithHandler {}
 
+#[derive(Clone)]
 /// `WorkerBuilder` is a builder pattern struct for constructing a `Worker` instance.
 /// Uses typestate pattern to enforce setting mandatory parameters.
 ///
@@ -162,45 +176,6 @@ impl<T: WorkerBuilderState> WorkerBuilder<T> {
 }
 
 impl WorkerBuilder<Initial> {
-    /// Sets the job type for the worker.
-    ///
-    /// The job type is defined in the BPMN process, for example:
-    /// `<zeebe:taskDefinition type="payment-service" />`.
-    ///
-    /// # Parameters
-    ///
-    /// - `job_type`: A `String` representing the job type.
-    ///
-    /// # Returns
-    ///
-    /// A `WorkerBuilder<WithJobType>` instance with the job type set.
-    pub fn with_job_type(mut self, job_type: String) -> WorkerBuilder<WithJobType> {
-        self.job_type = job_type;
-        self.transition()
-    }
-}
-
-impl WorkerBuilder<WithJobType> {
-    /// Sets the job timeout for the worker.
-    ///
-    /// A job returned after this call will not be activated by another call until the
-    /// specified timeout (in milliseconds) has been reached. This ensures that the job
-    /// is not picked up by another worker before the timeout expires.
-    ///
-    /// # Parameters
-    ///
-    /// - `timeout`: The duration for which the job should be locked.
-    ///
-    /// # Returns
-    ///
-    /// A `WorkerBuilder<WithTimeout>` instance with the job timeout configured.
-    pub fn with_job_timeout(mut self, timeout: Duration) -> WorkerBuilder<WithTimeout> {
-        self.timeout = timeout;
-        self.transition()
-    }
-}
-
-impl WorkerBuilder<WithTimeout> {
     /// Sets the request timeout for the worker.
     ///
     /// The request will be completed when at least one job is activated or after the specified `request_timeout`.
@@ -222,6 +197,26 @@ impl WorkerBuilder<WithTimeout> {
 }
 
 impl WorkerBuilder<WithRequestTimeout> {
+    /// Sets the job timeout for the worker.
+    ///
+    /// A job returned after this call will not be activated by another call until the
+    /// specified timeout (in milliseconds) has been reached. This ensures that the job
+    /// is not picked up by another worker before the timeout expires.
+    ///
+    /// # Parameters
+    ///
+    /// - `timeout`: The duration for which the job should be locked.
+    ///
+    /// # Returns
+    ///
+    /// A `WorkerBuilder<WithTimeout>` instance with the job timeout configured.
+    pub fn with_job_timeout(mut self, timeout: Duration) -> WorkerBuilder<WithTimeout> {
+        self.timeout = timeout;
+        self.transition()
+    }
+}
+
+impl WorkerBuilder<WithTimeout> {
     /// Sets the maximum number of jobs to activate in a single request.
     ///
     /// # Arguments
@@ -260,6 +255,25 @@ impl WorkerBuilder<WithMaxJobs> {
 }
 
 impl WorkerBuilder<WithConcurrency> {
+    /// Sets the job type for the worker.
+    ///
+    /// The job type is defined in the BPMN process, for example:
+    /// `<zeebe:taskDefinition type="payment-service" />`.
+    ///
+    /// # Parameters
+    ///
+    /// - `job_type`: A `String` representing the job type.
+    ///
+    /// # Returns
+    ///
+    /// A `WorkerBuilder<WithJobType>` instance with the job type set.
+    pub fn with_job_type(mut self, job_type: String) -> WorkerBuilder<WithJobType> {
+        self.job_type = job_type;
+        self.transition()
+    }
+}
+
+impl WorkerBuilder<WithJobType> {
     /// Sets the handler function for the worker.
     ///
     /// # Arguments
@@ -448,7 +462,7 @@ impl WorkerBuilder<WithHandler> {
 ///
 /// * `T` - The type of the shared state.
 pub struct WorkerStateBuilder<T> {
-    builder: WorkerBuilder<WithConcurrency>,
+    builder: WorkerBuilder<WithJobType>,
     state: Arc<SharedState<T>>,
 }
 
