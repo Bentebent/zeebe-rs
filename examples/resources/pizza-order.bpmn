@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_14wo5t0" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.16.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.3.0">
+  <bpmn:process id="pizza_order_process" name="Pizza ordering" isExecutable="true">
+    <bpmn:startEvent id="order_pizza_start_event" name="Hungry customer">
+      <bpmn:extensionElements />
+      <bpmn:outgoing>Flow_0w47dnb</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:receiveTask id="order_pizza_receive_task" name="Order online" messageRef="Message_0009tj1">
+      <bpmn:incoming>Flow_0w47dnb</bpmn:incoming>
+      <bpmn:outgoing>Flow_1x8c5xt</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:sequenceFlow id="Flow_0w47dnb" sourceRef="order_pizza_start_event" targetRef="order_pizza_receive_task" />
+    <bpmn:endEvent id="Event_0jd83yr" name="Pizza delivered">
+      <bpmn:incoming>Flow_1hl3g07</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1x8c5xt" sourceRef="order_pizza_receive_task" targetRef="confirm_order_service_task" />
+    <bpmn:sequenceFlow id="Flow_0on3y20" sourceRef="confirm_order_service_task" targetRef="Gateway_0xipv09" />
+    <bpmn:serviceTask id="confirm_order_service_task" name="Confirm order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="confirm_order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1x8c5xt</bpmn:incoming>
+      <bpmn:outgoing>Flow_0on3y20</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0xipv09">
+      <bpmn:incoming>Flow_0on3y20</bpmn:incoming>
+      <bpmn:outgoing>Flow_1oi39dw</bpmn:outgoing>
+      <bpmn:outgoing>Flow_18cdhzn</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1oi39dw" sourceRef="Gateway_0xipv09" targetRef="bake_pizzas_service_task">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=order_accepted</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="reject_order_service_task" name="Reject order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reject_order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_18cdhzn</bpmn:incoming>
+      <bpmn:outgoing>Flow_0y7iqby</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0y7iqby" sourceRef="reject_order_service_task" targetRef="order_rejected_end_event" />
+    <bpmn:endEvent id="order_rejected_end_event" name="Order rejected">
+      <bpmn:incoming>Flow_0y7iqby</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_18cdhzn" name="Out of stock" sourceRef="Gateway_0xipv09" targetRef="reject_order_service_task">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=order_accepted = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0pjp5qa" sourceRef="bake_pizzas_service_task" targetRef="deliver_order_service_task" />
+    <bpmn:sequenceFlow id="Flow_1hl3g07" sourceRef="deliver_order_service_task" targetRef="Event_0jd83yr" />
+    <bpmn:serviceTask id="bake_pizzas_service_task" name="Bake pizzas">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="bake_pizzas" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1oi39dw</bpmn:incoming>
+      <bpmn:outgoing>Flow_0pjp5qa</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="deliver_order_service_task" name="Deliver order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="deliver_order" retries="2" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0pjp5qa</bpmn:incoming>
+      <bpmn:incoming>Flow_0afthdr</bpmn:incoming>
+      <bpmn:outgoing>Flow_1hl3g07</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="invalid_address_err_boundary" name="Invalid address" attachedToRef="deliver_order_service_task">
+      <bpmn:outgoing>Flow_0b1hjvo</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1rxtn96" errorRef="Error_1mjy59a" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0b1hjvo" sourceRef="invalid_address_err_boundary" targetRef="clarify_address_service_task" />
+    <bpmn:serviceTask id="clarify_address_service_task" name="Clarify address">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="call_customer" retries="0" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0b1hjvo</bpmn:incoming>
+      <bpmn:outgoing>Flow_0afthdr</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0afthdr" sourceRef="clarify_address_service_task" targetRef="deliver_order_service_task" />
+  </bpmn:process>
+  <bpmn:message id="Message_0009tj1" name="order_pizza_msg">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=customer_id" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:error id="Error_1mjy59a" name="invalid_address" errorCode="invalid_address" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="pizza_order_process">
+      <bpmndi:BPMNShape id="Activity_1usiyet_di" bpmnElement="order_pizza_receive_task">
+        <dc:Bounds x="320" y="387" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0lxnixv_di" bpmnElement="confirm_order_service_task">
+        <dc:Bounds x="500" y="387" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0xipv09_di" bpmnElement="Gateway_0xipv09" isMarkerVisible="true">
+        <dc:Bounds x="665" y="402" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0o6yyoo_di" bpmnElement="reject_order_service_task">
+        <dc:Bounds x="640" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_107ukuw_di" bpmnElement="order_rejected_end_event">
+        <dc:Bounds x="672" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="654" y="78" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_19meldm_di" bpmnElement="bake_pizzas_service_task">
+        <dc:Bounds x="800" y="387" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0jd83yr_di" bpmnElement="Event_0jd83yr">
+        <dc:Bounds x="1192" y="409" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1176" y="452" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_04e7jgw_di" bpmnElement="deliver_order_service_task">
+        <dc:Bounds x="1000" y="387" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_099h12w_di" bpmnElement="order_pizza_start_event">
+        <dc:Bounds x="182" y="409" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="452" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0kfuljp_di" bpmnElement="clarify_address_service_task">
+        <dc:Bounds x="1000" y="200" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_09ob47o_di" bpmnElement="invalid_address_err_boundary">
+        <dc:Bounds x="1022" y="369" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1003" y="412" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0w47dnb_di" bpmnElement="Flow_0w47dnb">
+        <di:waypoint x="218" y="427" />
+        <di:waypoint x="320" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1x8c5xt_di" bpmnElement="Flow_1x8c5xt">
+        <di:waypoint x="420" y="427" />
+        <di:waypoint x="500" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0on3y20_di" bpmnElement="Flow_0on3y20">
+        <di:waypoint x="600" y="427" />
+        <di:waypoint x="665" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1oi39dw_di" bpmnElement="Flow_1oi39dw">
+        <di:waypoint x="715" y="427" />
+        <di:waypoint x="800" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18cdhzn_di" bpmnElement="Flow_18cdhzn">
+        <di:waypoint x="690" y="402" />
+        <di:waypoint x="690" y="300" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="700" y="348" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0y7iqby_di" bpmnElement="Flow_0y7iqby">
+        <di:waypoint x="690" y="220" />
+        <di:waypoint x="690" y="138" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pjp5qa_di" bpmnElement="Flow_0pjp5qa">
+        <di:waypoint x="900" y="427" />
+        <di:waypoint x="1000" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1hl3g07_di" bpmnElement="Flow_1hl3g07">
+        <di:waypoint x="1100" y="427" />
+        <di:waypoint x="1192" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0b1hjvo_di" bpmnElement="Flow_0b1hjvo">
+        <di:waypoint x="1040" y="369" />
+        <di:waypoint x="1040" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0afthdr_di" bpmnElement="Flow_0afthdr">
+        <di:waypoint x="1080" y="280" />
+        <di:waypoint x="1080" y="387" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
