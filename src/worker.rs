@@ -554,7 +554,7 @@ impl WorkProducer {
         request.max_jobs_to_activate = (self.max_jobs_to_activate - self.queued_jobs_count) as i32;
 
         tokio::spawn(async move {
-            if let Err(err) = timeout(request_timeout, async {
+            if let Err(_err) = timeout(request_timeout, async {
                 let res = client
                     .gateway_client
                     .activate_jobs(tonic::Request::new(request))
@@ -577,8 +577,7 @@ impl WorkProducer {
                     .await;
             })
             .await
-            {
-            };
+            {};
 
             let _ = poll_tx.send(PollingMessage::FetchJobsComplete).await;
         });
