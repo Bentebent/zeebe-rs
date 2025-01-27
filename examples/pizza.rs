@@ -130,6 +130,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         items: initial_stock,
     })));
 
+    // This will share the stock among all the workers confirming orders
+    // counting it down for each order.
     let confirm_worker = client
         .worker()
         .with_job_type(String::from("confirm_order"))
@@ -152,6 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_handler(bake_pizzas)
         .build();
 
+    // Handler can be both function callbacks or closures
     let reject_order_worker = client
         .worker()
         .with_job_type(String::from("reject_order"))
@@ -292,8 +295,6 @@ async fn bake_pizzas(client: Client, job: ActivatedJob) {
 
 async fn deliver_order(client: Client, job: ActivatedJob) {
     let data: Result<Customer, ClientError> = job.data();
-
-    println!("{:?}", data);
     let customer = data.unwrap();
 
     if customer.address.is_empty() {
