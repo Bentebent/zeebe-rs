@@ -1,17 +1,19 @@
 # zeebe-rs
 
 [![CI](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/Bentebent/zeebe-rs/actions/workflows/ci.yml)
+[![docs.rs](https://img.shields.io/docsrs/zeebe-rs)](https://docs.rs/crate/zeebe-rs/latest)
+[![crates.io](https://img.shields.io/crates/v/zeebe-rs.svg)](https://crates.io/crates/zeebe-rs)
 
 A Rust client and worker implementation for interacting with [Camunda Zeebe](https://camunda.com/platform/zeebe/) built using [Tonic](https://github.com/hyperium/tonic), [Tokio](https://github.com/tokio-rs/tokio) and [Serde](https://github.com/serde-rs/serde).
 
 ## Usage
 
-Add this crate to your `Cargo.toml` alongside `Tokio` and `Serde`.
+Make sure you have [protoc installed.](https://github.com/protocolbuffers/protobuf#protobuf-compiler-installation) Add `zeebe-rs` to your `Cargo.toml` alongside `Tokio` and `Serde`.
 
 ```toml
 serde = "1.0.217"
 tokio = "1.43.0"
-zeebe-rs = "1.0.0"
+zeebe-rs = "0.1.0"
 ```
 
 `zeebe-rs` uses the builder pattern together with type states extensively to guarantee that requests to Zeebe contain all required information. The client supports type safe conversions of data to and from Zeebe with `Serde`.
@@ -90,10 +92,6 @@ We welcome contributions from the community, see our [contribution guidelines](C
 
 ## License
 
-You can choose between [MIT License](https://opensource.org/licenses/MIT) or [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
-
-### MIT License
-
 Copyright (c) 2025 Tim Henriksson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -101,13 +99,3 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice (including the next paragraph) shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-### Apache License 2.0
-
-Copyright 2025 Tim Henriksson
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.

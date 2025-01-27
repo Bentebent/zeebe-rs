@@ -1,13 +1,16 @@
 [package]
 name = "zeebe-rs"
 version = "0.1.0"
+authors = ["Tim Henriksson <henriksson.tim@gmail.com>"]
 edition = "2021"
 description = "A gRPC client for interacting with the workflow and decision engine Camunda Zeebe."
-license = "MIT OR Apache-2.0"
+license = "MIT"
+homepage = "https://crates.io/crates/zeebe-rs"
 repository = "https://github.com/Bentebent/zeebe-rs"
 readme = "README.md"
 keywords = ["camunda", "zeebe", "gRPC", "protobuf", "orchestration"]
-categories = ["grpc", "automation", "process orchestration"]
+categories = ["api-bindings"]
+exclude = [".github/*", ".vscode/*", "doc/*"]
 
 [lib]
 crate-type = ["rlib"]
@@ -24,4 +27,4 @@ tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tonic = { version = "0.12.3", features = ["tls"] }
 
 [build-dependencies]
-tonic-build = "*"
+tonic-build = "0.12.3"
