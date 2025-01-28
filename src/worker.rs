@@ -299,11 +299,11 @@ impl WorkerBuilderState for WithHandler {}
 ///
 /// client
 ///     .worker()
-///     .with_job_type(String::from("demo-service"))
 ///     .with_job_timeout(Duration::from_secs(60))
 ///     .with_request_timeout(Duration::from_secs(10))
 ///     .with_max_jobs_to_activate(4)
 ///     .with_concurrency_limit(2)
+///     .with_job_type(String::from("demo-service"))
 ///     .with_state(state)
 ///     .with_handler(|client, job, state| async move {
 ///         let mut lock = state.lock().await;
@@ -476,35 +476,51 @@ impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
     /// async fn example_service(client: Client, job: ActivatedJob) {
     ///     // Your job handling logic here
     ///     // Function has to use the client to return results
+    ///     let _ = client.complete_job().with_job_key(job.key()).send().await;
     /// }
     ///
     /// client
     ///    .worker()
-    ///    .with_job_type(String::from("example-service"))
     ///    .with_job_timeout(Duration::from_secs(5 * 60))
     ///    .with_request_timeout(Duration::from_secs(10))
     ///    .with_max_jobs_to_activate(4)
     ///    .with_concurrency_limit(2)
+    ///     .with_job_type(String::from("example-service"))
     ///    .with_handler(example_service)
     ///    ...
     /// ```
     ///
+    /// If the function is defined to return a Result instead the result is used to automatically set the status
+    /// of the job.
+    ///
     /// ```ignore
-    /// // If the function is defined to return a Result instead the result is used to automatically set the status
-    /// // of the job
-    /// async fn example_service_other(client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
+    /// async fn example_service_with_result(_client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
     ///     Ok(())
     /// }
     ///
     /// client
     ///    .worker()
-    ///    .with_job_type(String::from("example-service"))
     ///    .with_job_timeout(Duration::from_secs(5 * 60))
     ///    .with_request_timeout(Duration::from_secs(10))
     ///    .with_max_jobs_to_activate(4)
     ///    .with_concurrency_limit(2)
-    ///    .with_handler(example_service)
+    ///    .with_job_type(String::from("example-service"))
+    ///    .with_handler(example_service_with_result)
     ///    ...
+    /// ```
+    /// This works for closures as well but requires them to be type annotated.
+    ///
+    /// ```ignore
+    /// client
+    ///     .worker()
+    ///     .with_request_timeout(Duration::from_secs(10))
+    ///     .with_job_timeout(Duration::from_secs(10))
+    ///     .with_max_jobs_to_activate(5)
+    ///     .with_concurrency_limit(5)
+    ///     .with_job_type(String::from("example_service"))
+    ///     .with_handler(|_client, _job| async move { Ok::<(), WorkerError<()>>(()) })
+    ///     .build();
+    ///
     /// ```
     ///
     /// # Type Parameters
@@ -515,7 +531,7 @@ impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
     /// # Constraints
     ///
     /// * `F` must implement `Fn(Client, ActivatedJob) -> R` and must be `Send`, `Sync`, and `'static`.
-    /// * `R` must implement `Future<Output = ()>` and must be `Send` and `'static`.
+    /// * `R` must implement `Future<Output = Output>` and must be `Send` and `'static`.
     pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler, Output>
     where
         F: Fn(Client, ActivatedJob) -> R + Send + Sync + 'static,
@@ -711,11 +727,11 @@ impl<T, Output: Send + 'static> WorkerStateBuilder<T, Output> {
     ///
     /// client
     ///    .worker()
-    ///    .with_job_type(String::from("example-service"))
     ///    .with_job_timeout(Duration::from_secs(5 * 60))
     ///    .with_request_timeout(Duration::from_secs(10))
     ///    .with_max_jobs_to_activate(4)
     ///    .with_concurrency_limit(2)
+    ///    .with_job_type(String::from("example-service"))
     ///    .with_state(state)
     ///    .with_handler(example_service)
     ///    ...
@@ -901,11 +917,11 @@ where
 /// ```ignore
 /// let worker = client
 ///     .worker()
-///     .with_job_type("example-service")
 ///     .with_job_timeout(Duration::from_secs(60))
 ///     .with_request_timeout(Duration::from_secs(10))
 ///     .with_max_jobs_to_activate(5)
 ///     .with_concurrency_limit(3)
+///     .with_job_type("example-service")
 ///     .with_handler(|client, job| async move {
 ///         // Process job here
 ///         client.complete_job().with_job_key(job.key()).send().await;
