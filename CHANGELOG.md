@@ -16,12 +16,20 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ### Security
 
-## 0.2.0 - TBD
+## 0.2.0 - 2024-01-28
+
+### Added
+
+- Added new error type `WorkerError<R>`
+- Added support for worker handlers that return `Result<T, WorkerError<R>>`
+  - Any worker handler that returns a `Result` instead of `()` now automatically reports success/failure to Zeebe
+    using `fail_job`, `throw_error` or `complete_job`.
 
 ### Changed
 
 - Refactored worker builder for easier re-use of shared configurations
 - Updated documentation across solution
+- Updated `pizza` example to reflect new worker functionality
 
 ## 0.1.0 - 2024-01-27
 
