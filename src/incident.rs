@@ -8,7 +8,6 @@ impl ResolveIncidentRequestState for Initial {}
 impl ResolveIncidentRequestState for WithKey {}
 
 /// Request builder for resolving incidents in Zeebe.
-/// Uses a type-state pattern to ensure the incident key is set.
 ///
 /// This simply marks the incident as resolved. Most likely a call to
 /// UpdateJobRetries or SetVariables will be necessary to actually resolve the
