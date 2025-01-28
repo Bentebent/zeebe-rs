@@ -40,6 +40,32 @@ impl OAuthConfig {
     }
 }
 
+/// Represents the different types of errors that can occur during OAuth operations.
+///
+/// The `OAuthError` enum encapsulates various error scenarios that may arise during the OAuth process,
+/// such as acquiring token locks, making requests, handling timeouts, or token unavailability.
+///
+/// # Variants
+///
+/// - `LockUnavailable`
+///   Indicates a failure to acquire a lock for the token. This typically occurs when a lock
+///   mechanism is being used to ensure safe concurrent access to OAuth tokens.
+///   - Fields:
+///     - `String`: A message providing additional context about the lock failure.
+///
+/// - `Request`
+///   Represents a failure that occurred during an OAuth-related request.
+///   - Fields:
+///     - `String`: A message describing the nature of the request failure.
+///
+/// - `Timeout`
+///   Indicates that a timeout occurred during an OAuth operation. This variant wraps the `Elapsed`
+///   type from the `tokio` crate, which provides details about the timeout event.
+///   - Source: `Elapsed`
+///
+/// - `TokenUnavailable`
+///   Indicates that a required token was not available. This error typically occurs when attempting
+///   to retrieve or use an OAuth token that has not been issued or is otherwise inaccessible.
 #[derive(Error, Debug)]
 pub enum OAuthError {
     #[error("failed to acquire token lock")]
