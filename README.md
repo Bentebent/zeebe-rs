@@ -21,7 +21,6 @@ zeebe-rs = "0.1.0"
 ### Example
 
 ```rust
-
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
 
@@ -86,9 +85,19 @@ Built using:
 - cargo 1.85.0-nightly (4c39aaff6 2024-11-25) (fmt and clippy only)
 - [protoc v29.2](https://github.com/protocolbuffers/protobuf/releases/tag/v29.2)
 
+## Releases
+
+This project aims to release in lockstep with new versions of [Zeebe](https://camunda.com/platform/zeebe/). The API should be considered unstable until version 1.0.0 is reached. There is currently no versioning schema that matches the zeebe-rs version with the Zeebe version.
+
 ## Contributing
 
 We welcome contributions from the community, see our [contribution guidelines](CONTRIBUTING.md).
+
+## Attributions
+
+This library draws heavily from [pyzeebe](https://github.com/camunda-community-hub/pyzeebe), [zeebest](https://github.com/camunda-community-hub/zeebest) and [zeebe-rust](https://github.com/camunda-community-hub/zeebe-rust). We comply with their licensing terms and acknowledge their significant contributions. Some portions of this library include adapted code or ideas from these projects. Any modifications made are in compliance with the original licensing terms.
+
+We are deeply grateful to the maintainers and contributors of these projects for their invaluable efforts in advancing the open-source community. We encourage developers to explore these projects for more insights into working with the Zeebe workflow engine.
 
 ## License
 
