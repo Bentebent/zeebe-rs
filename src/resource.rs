@@ -346,21 +346,15 @@ impl From<proto::ProcessMetadata> for ProcessMetadata {
     }
 }
 
+/// Metadata information for a deployed DMN decision definition.
 #[derive(Debug, Clone)]
 pub struct DecisionMetadata {
-    /// ID that uniquely identifies this decision
     dmn_decision_id: String,
-    /// Human-readable name of this decision
     dmn_decision_name: String,
-    /// Version of this decision
     version: i32,
-    /// Unique key assigned by Zeebe
     decision_key: i64,
-    /// ID of decision requirements graph this belongs to
     dmn_decision_requirement_id: String,
-    /// Key of decision requirements graph this belongs to
     decision_requirements_key: i64,
-    /// ID of tenant that owns this decision
     tenant_id: String,
 }
 
@@ -429,19 +423,14 @@ impl From<proto::DecisionMetadata> for DecisionMetadata {
     }
 }
 
+/// Metadata information for a deployed DMN decision requirement definition.
 #[derive(Debug, Clone)]
 pub struct DecisionRequirementsMetadata {
-    /// ID that uniquely identifies this decision requirements graph
     dmn_decision_requirements_id: String,
-    /// Human-readable name of this decision requirements graph
     dmn_decision_requirements_name: String,
-    /// Version of this decision requirements graph
     version: i32,
-    /// Unique key assigned by Zeebe
     decision_requirements_key: i64,
-    /// Name of resource file this was deployed from
     resource_name: String,
-    /// ID of tenant that owns this decision requirements graph
     tenant_id: String,
 }
 
