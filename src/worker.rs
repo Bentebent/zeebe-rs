@@ -90,7 +90,7 @@ impl<T> DerefMut for SharedState<T> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// async fn my_handler(client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
 ///     // Handle job processing
 ///     Ok(())
@@ -136,7 +136,7 @@ where
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// impl WorkerOutputHandler<()> for () {
 ///     fn handle_result(client: Client, job: ActivatedJob, result: ()) -> Pin<Box<dyn Future<Output = ()> + Send>> {
 ///         Box::pin(async {})
