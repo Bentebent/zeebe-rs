@@ -26,6 +26,43 @@ use tonic::{
     transport::{Certificate, Channel, ClientTlsConfig},
 };
 
+/// Represents the different types of errors that can occur in the client.
+///
+/// The `ClientError` enum encapsulates various error types, providing a unified way to handle errors
+/// that arise during client operations, including networking issues, JSON processing errors, and
+/// resource-related errors. Each variant includes contextual information to help diagnose and resolve
+/// issues effectively.
+///
+/// # Variants
+///
+/// - `RequestFailed`
+///   Represents an error originating from a gRPC request. This variant wraps the `tonic::Status`
+///   error type, which provides details about the request failure.
+///   - Source: `tonic::Status`
+///
+/// - `JsonError`
+///   Represents a general JSON parsing or serialization error. This variant wraps the `serde_json::Error`
+///   type, which is returned when JSON data cannot be processed correctly.
+///   - Source: `serde_json::Error`
+///
+/// - `ResourceError`
+///   Represents an error related to resource deployment. This variant wraps the `DeployResourceError`
+///   type, which provides context about specific resource-related issues.
+///   - Source: `DeployResourceError`
+///
+/// - `DeserializationFailed`
+///   Indicates that deserialization of a JSON string failed. This variant provides additional
+///   context by including the original value that caused the error, as well as the underlying
+///   `serde_json::Error`.
+///   - Fields:
+///     - `value`: The JSON string that failed to deserialize.
+///     - `source`: The underlying `serde_json::Error`.
+///
+/// - `SerializationFailed`
+///   Indicates that serialization of data into JSON failed. This variant includes the underlying
+///   `serde_json::Error` to provide details about the failure.
+///   - Fields:
+///     - `source`: The underlying `serde_json::Error`.
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error(transparent)]
