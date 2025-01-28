@@ -33,5 +33,4 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ## Notes
 
-This version is compatible with Zeebe v5.29.2
-API should be considered unstable until 1.0.0
+This version is compatible with Zeebe v5.29.2. API should be considered unstable until 1.0.0
