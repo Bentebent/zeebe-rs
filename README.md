@@ -89,6 +89,10 @@ Built using:
 
 This project aims to release in lockstep with new versions of [Zeebe](https://camunda.com/platform/zeebe/). The API should be considered unstable until version 1.0.0 is reached. There is currently no versioning schema that matches the zeebe-rs version with the Zeebe version.
 
+## Changelog
+
+See the [changelog](CHANGELOG.md) for information on what each release contains.
+
 ## Contributing
 
 We welcome contributions from the community, see our [contribution guidelines](CONTRIBUTING.md).
