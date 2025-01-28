@@ -1,4 +1,4 @@
-use crate::{proto, ActivatedJob, Client};
+use crate::{client, proto, ActivatedJob, Client};
 use serde::Serialize;
 use std::{
     future::Future,
@@ -24,7 +24,7 @@ use tokio::{
 /// # Type Parameters
 ///
 /// * `T` - A serializable type that can be included with error data
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Error)]
 pub enum WorkerError<T>
 where
     T: Serialize + Send + 'static,
@@ -47,6 +47,9 @@ where
         error_message: Option<String>,
         data: T,
     },
+
+    #[error(transparent)]
+    ClientError(#[from] client::ClientError),
 }
 
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(15);
@@ -235,6 +238,15 @@ where
                             }
                             let _ = req.send().await;
                         }
+                    }
+                    WorkerError::ClientError(client_error) => {
+                        let _ = client
+                            .fail_job()
+                            .with_job_key(job.key())
+                            .with_retries(job.retries() - 1)
+                            .with_error_message(client_error.to_string())
+                            .send()
+                            .await;
                     }
                 },
             }
