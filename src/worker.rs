@@ -129,7 +129,7 @@ where
 ///
 /// # Type Parameters
 ///
-/// * `Output` - The type of output produced by the job handler
+/// * `T` - The type of output produced by the job handler
 ///
 /// # Examples
 ///
@@ -140,11 +140,11 @@ where
 ///     }
 /// }
 /// ```
-pub trait WorkerOutputHandler<Output> {
+pub trait WorkerOutputHandler<T> {
     fn handle_result(
         client: Client,
         job: ActivatedJob,
-        result: Output,
+        result: T,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
