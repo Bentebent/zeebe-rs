@@ -719,7 +719,7 @@ impl Client {
     ///    .run()
     ///    .await;
     /// ```
-    pub fn worker(&self) -> WorkerBuilder<crate::worker::Initial> {
-        WorkerBuilder::<crate::worker::Initial>::new(self.clone())
+    pub fn worker<Output: Send + 'static>(&self) -> WorkerBuilder<crate::worker::Initial, Output> {
+        WorkerBuilder::<crate::worker::Initial, Output>::new(self.clone())
     }
 }

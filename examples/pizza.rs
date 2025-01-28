@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time::sleep};
-use zeebe_rs::{ActivatedJob, Client, ClientError, SharedState};
+use zeebe_rs::{ActivatedJob, Client, ClientError, SharedState, WorkerError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Customer {
@@ -130,16 +130,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         items: initial_stock,
     })));
 
-    // We can reuse the worker builder for sharing some configurations
-    let base_worker = client
-        .worker()
-        .with_request_timeout(Duration::from_secs(10))
-        .with_job_timeout(Duration::from_secs(10));
-
     // This will share the stock among all the workers confirming orders
     // counting it down for each order.
-    let confirm_worker = base_worker
-        .clone()
+    let confirm_worker = client
+        .worker()
+        .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10))
         .with_max_jobs_to_activate(4)
         .with_concurrency_limit(2)
         .with_job_type(String::from("confirm_order"))
@@ -147,6 +143,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_handler(confirm_order)
         .with_fetch_variable(String::from("items"))
         .build();
+
+    // We can reuse the worker builder for sharing some configurations
+    let base_worker = client
+        .worker()
+        .with_request_timeout(Duration::from_secs(10))
+        .with_job_timeout(Duration::from_secs(10));
 
     let bake_worker = base_worker
         .clone()
@@ -157,6 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build();
 
     // Handler can be both function callbacks or closures
+    // Handlers have to share return type for this to work
     let reject_order_worker = client
         .worker()
         .with_request_timeout(Duration::from_secs(10))
@@ -164,9 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_max_jobs_to_activate(5)
         .with_concurrency_limit(5)
         .with_job_type(String::from("reject_order"))
-        .with_handler(|client, job| async move {
-            let _ = client.complete_job().with_job_key(job.key()).send().await;
-        })
+        .with_handler(|_client, _job| async move { Ok::<(), WorkerError<()>>(()) })
         .build();
 
     let deliver_worker = client
@@ -179,10 +180,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_handler(deliver_order)
         .build();
 
-    let clarify_address_worker = client
-        .worker()
-        .with_request_timeout(Duration::from_secs(10))
-        .with_job_timeout(Duration::from_secs(10))
+    let clarify_address_worker = base_worker
+        .clone()
         .with_max_jobs_to_activate(5)
         .with_concurrency_limit(5)
         .with_job_type(String::from("call_customer"))
@@ -216,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "John Doe",
         "999 NotCoolsville, USA",
         false,
-        vec!["Hawaiian"; 100],
+        vec!["Quattro Formaggi"; 100],
     ));
 
     tokio::spawn(place_order(
@@ -248,39 +247,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn confirm_order(client: Client, job: ActivatedJob, state: Arc<SharedState<Mutex<Stock>>>) {
+async fn confirm_order(
+    _client: Client,
+    job: ActivatedJob,
+    state: Arc<SharedState<Mutex<Stock>>>,
+) -> Result<OrderResult, WorkerError<()>> {
     let order = job
         .data::<Order>()
         .expect("For demonstration purposes we're not handling a missing order here");
     let mut stock: tokio::sync::MutexGuard<Stock> = state.lock().await;
 
     let mut order_accepted = true;
-    let mut order_message = None;
+    let mut message = None;
     for item in order.items {
         if let Some(quantity) = stock.items.get_mut(&item) {
             if *quantity > 0 {
                 *quantity -= 1;
             } else {
-                order_message = Some(format!("We're out of stock of {}", item));
+                message = Some(format!("We're out of stock of {}", item));
                 order_accepted = false;
             }
         } else {
-            order_message = Some(format!("We don't serve {}", item));
+            message = Some(format!("We don't serve {}", item));
             order_accepted = false;
         }
     }
 
     println!("Confirmed order");
-    if let Ok(req) = client
-        .complete_job()
-        .with_job_key(job.key())
-        .with_variables(OrderResult {
-            order_accepted,
-            message: order_message,
-        })
-    {
-        let _ = req.send().await;
-    }
+    Ok(OrderResult {
+        order_accepted,
+        message,
+    })
 }
 
 async fn bake_pizzas(client: Client, job: ActivatedJob) {
@@ -295,44 +292,28 @@ async fn bake_pizzas(client: Client, job: ActivatedJob) {
     let _ = client.complete_job().with_job_key(job.key()).send().await;
 }
 
-async fn deliver_order(client: Client, job: ActivatedJob) {
+async fn deliver_order(
+    _client: Client,
+    job: ActivatedJob,
+) -> Result<(), WorkerError<serde_json::Value>> {
     let data: Result<Customer, ClientError> = job.data();
     let customer = data.unwrap();
 
     if customer.address.is_empty() {
-        let _ = client
-            .throw_error()
-            .with_job_key(job.key())
-            .with_error_code(String::from("invalid_address"))
-            .with_error_message(String::from("Missing address"))
-            .send()
-            .await;
-
-        let _ = client
-            .fail_job()
-            .with_job_key(job.key())
-            .with_retries(job.retries() - 1)
-            .send()
-            .await;
-
-        return;
+        return Err(WorkerError::ThrowError {
+            error_code: String::from("invalid_address"),
+            error_message: Some(String::from("Missing address")),
+        });
     }
 
     if customer.bad_tipper && job.retries() > 1 {
         println!("Customer is a bad tipper, let's delay their order");
         sleep(Duration::from_secs(10)).await;
 
-        let builder = client
-            .fail_job()
-            .with_job_key(job.key())
-            .with_retries(job.retries() - 1)
-            .with_error_message(String::from("Bad tipper, delaying delivery"))
-            .with_variables(json!({"apology": "Oops"}));
-
-        if let Ok(builder) = builder {
-            let _ = builder.send().await;
-        }
-    } else {
-        let _ = client.complete_job().with_job_key(job.key()).send().await;
+        return Err(WorkerError::FailJobWithData {
+            error_message: String::from("Bad tipper, delaying delivery"),
+            data: json!({"apology": "Oops"}),
+        });
     }
+    Ok(())
 }
