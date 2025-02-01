@@ -1983,7 +1983,7 @@ dependencies = [
 
 [[package]]
 name = "zeebe-rs"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "oauth2",
  "prost",
