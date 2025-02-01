@@ -54,4 +54,7 @@ pub use set_variables::{SetVariablesRequest, SetVariablesResponse};
 pub use signal::{BroadcastSignalRequest, BroadcastSignalResponse};
 pub use throw_error::{ThrowErrorRequest, ThrowErrorResponse};
 pub use topology::{TopologyRequest, TopologyResponse};
-pub use worker::{JobHandler, SharedState, WorkerError, WorkerOutputHandler};
+pub use worker::{
+    JobHandler, SharedState, Worker, WorkerBuilder, WorkerError, WorkerOutputHandler,
+    WorkerStateBuilder,
+};

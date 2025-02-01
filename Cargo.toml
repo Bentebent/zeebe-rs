@@ -1,6 +1,6 @@
 [package]
 name = "zeebe-rs"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Tim Henriksson <henriksson.tim@gmail.com>"]
 edition = "2021"
 description = "A gRPC client for interacting with the workflow and decision engine Camunda Zeebe."
