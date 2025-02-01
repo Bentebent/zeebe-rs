@@ -16,6 +16,12 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ### Security
 
+## 0.2.1 - 2024-02-01
+
+### Changed
+
+- Exposed some missing Worker constructs to make sure they are documented in docs.rs
+
 ## 0.2.0 - 2024-01-28
 
 ### Added
