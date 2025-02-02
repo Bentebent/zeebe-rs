@@ -21,23 +21,17 @@ impl<T> Deref for MyResult<T> {
 }
 
 // Implement the WorkerOutputHandler for our custom result type
-impl<T> WorkerOutputHandler<MyResult<T>> for MyResult<T>
+impl<T> WorkerOutputHandler for MyResult<T>
 where
     T: Send + 'static,
 {
-    fn handle_result(
-        client: Client,
-        job: ActivatedJob,
-        result: MyResult<T>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            match *result {
-                Ok(_) => unreachable!("This will always fail!"),
-                Err(_) => {
-                    let _ = client.fail_job().with_job_key(job.key()).send().await;
-                }
+    async fn handle_result(self, client: Client, job: ActivatedJob) {
+        match *self {
+            Ok(_) => unreachable!("This will always fail!"),
+            Err(_) => {
+                let _ = client.fail_job().with_job_key(job.key()).send().await;
             }
-        })
+        }
     }
 }
 

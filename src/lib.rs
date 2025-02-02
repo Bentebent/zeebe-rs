@@ -56,5 +56,4 @@ pub use throw_error::{ThrowErrorRequest, ThrowErrorResponse};
 pub use topology::{TopologyRequest, TopologyResponse};
 pub use worker::{
     JobHandler, SharedState, Worker, WorkerBuilder, WorkerError, WorkerOutputHandler,
-    WorkerStateBuilder,
 };
