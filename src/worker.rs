@@ -3,7 +3,6 @@ use serde::Serialize;
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
-    pin::Pin,
     sync::Arc,
     time::Duration,
 };
@@ -53,7 +52,6 @@ where
 }
 
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(15);
-type BoxFutureOf<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 
 /// A wrapper struct that holds a shared state of type `T`.
 ///
@@ -79,51 +77,6 @@ impl<T> DerefMut for SharedState<T> {
     }
 }
 
-/// A trait defining the interface for job handling functions.
-///
-/// This trait is implemented automatically for functions that match the required
-/// signature, allowing them to be used as job handlers in the worker.
-///
-/// # Type Parameters
-///
-/// * `Output` - The type that the handler returns when processing is complete
-///
-/// # Examples
-///
-/// ```ignore
-/// async fn my_handler(client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
-///     // Handle job processing
-///     Ok(())
-/// }
-/// ```
-pub trait JobHandler<Output>: Send + Sync {
-    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFutureOf<Output>;
-}
-
-impl<F, Fut, Output> JobHandler<Output> for F
-where
-    F: Fn(Client, ActivatedJob) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Output> + Send + 'static,
-    Output: Send + 'static,
-{
-    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFutureOf<Output> {
-        Box::pin((self)(client, job))
-    }
-}
-
-impl<F, T, Fut, Output> JobHandler<Output> for (F, Arc<SharedState<T>>)
-where
-    F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Output> + Send + 'static,
-    T: Send + Sync + 'static,
-    Output: Send + 'static,
-{
-    fn execute(&self, client: Client, job: ActivatedJob) -> BoxFutureOf<Output> {
-        let state = self.1.clone();
-        Box::pin((self.0)(client, job, state))
-    }
-}
-
 /// A trait for handling the output of job processing.
 ///
 /// This trait defines how different output types should be handled after
@@ -143,114 +96,157 @@ where
 ///     }
 /// }
 /// ```
-pub trait WorkerOutputHandler<T> {
+pub trait WorkerOutputHandler {
     fn handle_result(
+        self,
         client: Client,
         job: ActivatedJob,
-        result: T,
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+    ) -> impl Future<Output = ()> + Send + 'static;
 }
 
-impl WorkerOutputHandler<()> for () {
+impl WorkerOutputHandler for () {
     fn handle_result(
+        self,
         _client: Client,
         _job: ActivatedJob,
-        _result: (),
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async {})
+    ) -> impl Future<Output = ()> + Send + 'static {
+        std::future::ready(())
     }
 }
 
-impl<Output, T> WorkerOutputHandler<Result<Output, WorkerError<T>>>
-    for Result<Output, WorkerError<T>>
+impl<Output, T> WorkerOutputHandler for Result<Output, WorkerError<T>>
 where
     Output: Serialize + Send + 'static,
     T: Serialize + Send + 'static,
 {
-    fn handle_result(
-        client: Client,
-        job: ActivatedJob,
-        result: Result<Output, WorkerError<T>>,
-    ) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            match result {
-                Ok(value) => {
-                    if let Ok(req) = client
-                        .complete_job()
+    async fn handle_result(self, client: Client, job: ActivatedJob) {
+        match self {
+            Ok(value) => {
+                if let Ok(req) = client
+                    .complete_job()
+                    .with_job_key(job.key())
+                    .with_variables(value)
+                {
+                    let _ = req.send().await;
+                }
+            }
+            Err(error) => match error {
+                WorkerError::FailJob(error_message) => {
+                    let _ = client
+                        .fail_job()
                         .with_job_key(job.key())
-                        .with_variables(value)
+                        .with_retries(job.retries() - 1)
+                        .with_error_message(error_message)
+                        .send()
+                        .await;
+                }
+                WorkerError::FailJobWithData {
+                    error_message,
+                    data,
+                } => {
+                    if let Ok(req) = client
+                        .fail_job()
+                        .with_job_key(job.key())
+                        .with_retries(job.retries() - 1)
+                        .with_error_message(error_message)
+                        .with_variables(data)
                     {
                         let _ = req.send().await;
                     }
                 }
-                Err(error) => match error {
-                    WorkerError::FailJob(error_message) => {
-                        let _ = client
-                            .fail_job()
-                            .with_job_key(job.key())
-                            .with_retries(job.retries() - 1)
-                            .with_error_message(error_message)
-                            .send()
-                            .await;
-                    }
-                    WorkerError::FailJobWithData {
-                        error_message,
-                        data,
-                    } => {
-                        if let Ok(req) = client
-                            .fail_job()
-                            .with_job_key(job.key())
-                            .with_retries(job.retries() - 1)
-                            .with_error_message(error_message)
-                            .with_variables(data)
-                        {
-                            let _ = req.send().await;
-                        }
+
+                WorkerError::ThrowError {
+                    error_code,
+                    error_message,
+                } => {
+                    let mut builder = client
+                        .throw_error()
+                        .with_job_key(job.key())
+                        .with_error_code(error_code);
+                    if let Some(error_message) = error_message {
+                        builder = builder.with_error_message(error_message);
                     }
 
-                    WorkerError::ThrowError {
-                        error_code,
-                        error_message,
-                    } => {
-                        let mut builder = client
-                            .throw_error()
-                            .with_job_key(job.key())
-                            .with_error_code(error_code);
+                    let _ = builder.send().await;
+                }
+                WorkerError::ThrowErrorWithData {
+                    error_code,
+                    error_message,
+                    data,
+                } => {
+                    if let Ok(mut req) = client
+                        .throw_error()
+                        .with_job_key(job.key())
+                        .with_error_code(error_code)
+                        .with_variables(data)
+                    {
                         if let Some(error_message) = error_message {
-                            builder = builder.with_error_message(error_message);
+                            req = req.with_error_message(error_message);
                         }
+                        let _ = req.send().await;
+                    }
+                }
+                WorkerError::ClientError(client_error) => {
+                    let _ = client
+                        .fail_job()
+                        .with_job_key(job.key())
+                        .with_retries(job.retries() - 1)
+                        .with_error_message(client_error.to_string())
+                        .send()
+                        .await;
+                }
+            },
+        }
+    }
+}
 
-                        let _ = builder.send().await;
-                    }
-                    WorkerError::ThrowErrorWithData {
-                        error_code,
-                        error_message,
-                        data,
-                    } => {
-                        if let Ok(mut req) = client
-                            .throw_error()
-                            .with_job_key(job.key())
-                            .with_error_code(error_code)
-                            .with_variables(data)
-                        {
-                            if let Some(error_message) = error_message {
-                                req = req.with_error_message(error_message);
-                            }
-                            let _ = req.send().await;
-                        }
-                    }
-                    WorkerError::ClientError(client_error) => {
-                        let _ = client
-                            .fail_job()
-                            .with_job_key(job.key())
-                            .with_retries(job.retries() - 1)
-                            .with_error_message(client_error.to_string())
-                            .send()
-                            .await;
-                    }
-                },
-            }
-        })
+/// A trait defining the interface for job handling functions.
+///
+/// This trait is implemented automatically for functions that match the required
+/// signature, allowing them to be used as job handlers in the worker.
+///
+/// # Type Parameters
+///
+/// * `Output` - The type that the handler returns when processing is complete
+///
+/// # Examples
+///
+/// ```ignore
+/// async fn my_handler(client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
+///     // Handle job processing
+///     Ok(())
+/// }
+/// ```
+pub trait JobHandler {
+    type Output: WorkerOutputHandler + Send + 'static;
+    fn execute(&self, client: Client, job: ActivatedJob) -> impl Future<Output = ()> + Send;
+}
+
+impl<F, Fut> JobHandler for F
+where
+    F: Fn(Client, ActivatedJob) -> Fut + Send + Sync + 'static,
+    Fut: Future + Send + 'static,
+    Fut::Output: WorkerOutputHandler + Send + 'static,
+{
+    type Output = Fut::Output;
+    async fn execute(&self, client: Client, job: ActivatedJob) {
+        let res = (self)(client.clone(), job.clone()).await;
+        res.handle_result(client, job).await;
+    }
+}
+
+impl<F, T, Fut> JobHandler for (F, Arc<SharedState<T>>)
+where
+    F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> Fut + Send + Sync + 'static,
+    Fut: Future + Send + 'static,
+    Fut::Output: WorkerOutputHandler + Send + 'static,
+    T: Send + Sync + 'static,
+{
+    type Output = Fut::Output;
+    async fn execute(&self, client: Client, job: ActivatedJob) {
+        let state = self.1.clone();
+        let res = (self.0)(client.clone(), job.clone(), state).await;
+        res.handle_result(client, job).await;
     }
 }
 
@@ -261,7 +257,7 @@ pub struct Initial {}
 pub struct WithJobType {}
 
 #[derive(Clone)]
-pub struct WithTimeout {}
+pub struct WithJobTimeout {}
 
 #[derive(Clone)]
 pub struct WithRequestTimeout {}
@@ -273,16 +269,20 @@ pub struct WithMaxJobs {}
 pub struct WithConcurrency {}
 
 #[derive(Clone)]
+pub struct WithState {}
+
+#[derive(Clone)]
 pub struct WithHandler {}
 
 pub trait WorkerBuilderState {}
 
 impl WorkerBuilderState for Initial {}
 impl WorkerBuilderState for WithJobType {}
-impl WorkerBuilderState for WithTimeout {}
+impl WorkerBuilderState for WithJobTimeout {}
 impl WorkerBuilderState for WithRequestTimeout {}
 impl WorkerBuilderState for WithMaxJobs {}
 impl WorkerBuilderState for WithConcurrency {}
+impl WorkerBuilderState for WithState {}
 impl WorkerBuilderState for WithHandler {}
 
 #[derive(Clone)]
@@ -324,23 +324,28 @@ impl WorkerBuilderState for WithHandler {}
 ///      })
 ///      .build()
 /// ```
-pub struct WorkerBuilder<T, Output> {
+pub struct WorkerBuilder<S, H = (), T = ()>
+where
+    S: WorkerBuilderState,
+    T: Send + Sync + 'static,
+{
     client: Client,
     job_type: String,
     worker_name: String,
     timeout: Duration,
     max_jobs_to_activate: i32,
     concurrency_limit: u32,
-    worker_callback: Option<Arc<Box<dyn JobHandler<Output>>>>,
+    worker_callback: Option<Arc<H>>,
+    state: Option<Arc<SharedState<T>>>,
     fetch_variable: Vec<String>,
     request_timeout: Duration,
     tenant_ids: Vec<String>,
-    _state: std::marker::PhantomData<T>,
+    _state: std::marker::PhantomData<S>,
 }
 
-impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
-    pub(crate) fn new(client: Client) -> WorkerBuilder<Initial, Output> {
-        WorkerBuilder {
+impl WorkerBuilder<Initial> {
+    pub fn new(client: Client) -> Self {
+        Self {
             client,
             job_type: String::new(),
             worker_name: String::new(),
@@ -348,6 +353,7 @@ impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
             max_jobs_to_activate: 0,
             concurrency_limit: 0,
             worker_callback: None,
+            state: None,
             fetch_variable: vec![],
             request_timeout: Duration::default(),
             tenant_ids: vec![],
@@ -355,6 +361,40 @@ impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
         }
     }
 
+    /// Sets the request timeout for the worker.
+    ///
+    /// The request will be completed when at least one job is activated or after the specified `request_timeout`.
+    ///
+    /// # Arguments
+    ///
+    /// * `request_timeout` - The duration to wait before the request times out.
+    ///
+    /// # Returns
+    ///
+    /// A `WorkerBuilder<WithRequestTimeout>` instance with the request timeout configured.
+    pub fn with_request_timeout(
+        self,
+        request_timeout: Duration,
+    ) -> WorkerBuilder<WithRequestTimeout> {
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: self.worker_callback,
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
+    }
+}
+
+/*
+impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
     fn transition<NewState: WorkerBuilderState>(self) -> WorkerBuilder<NewState, Output> {
         WorkerBuilder {
             client: self.client,
@@ -371,29 +411,12 @@ impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
         }
     }
 }
+*/
 
-impl<Output: Send + 'static> WorkerBuilder<Initial, Output> {
-    /// Sets the request timeout for the worker.
-    ///
-    /// The request will be completed when at least one job is activated or after the specified `request_timeout`.
-    ///
-    /// # Arguments
-    ///
-    /// * `request_timeout` - The duration to wait before the request times out.
-    ///
-    /// # Returns
-    ///
-    /// A `WorkerBuilder<WithRequestTimeout>` instance with the request timeout configured.
-    pub fn with_request_timeout(
-        mut self,
-        request_timeout: Duration,
-    ) -> WorkerBuilder<WithRequestTimeout, Output> {
-        self.request_timeout = request_timeout;
-        self.transition()
-    }
-}
+//impl<Output: Send + 'static> WorkerBuilder<Initial, Output> {
+//(())}
 
-impl<Output: Send + 'static> WorkerBuilder<WithRequestTimeout, Output> {
+impl WorkerBuilder<WithRequestTimeout> {
     /// Sets the job timeout for the worker.
     ///
     /// A job returned after this call will not be activated by another call until the
@@ -407,13 +430,25 @@ impl<Output: Send + 'static> WorkerBuilder<WithRequestTimeout, Output> {
     /// # Returns
     ///
     /// A `WorkerBuilder<WithTimeout>` instance with the job timeout configured.
-    pub fn with_job_timeout(mut self, timeout: Duration) -> WorkerBuilder<WithTimeout, Output> {
-        self.timeout = timeout;
-        self.transition()
+    pub fn with_job_timeout(self, timeout: Duration) -> WorkerBuilder<WithJobTimeout> {
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: self.worker_callback,
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
 }
 
-impl<Output: Send + 'static> WorkerBuilder<WithTimeout, Output> {
+impl WorkerBuilder<WithJobTimeout> {
     /// Sets the maximum number of jobs to activate in a single request.
     ///
     /// # Arguments
@@ -424,15 +459,27 @@ impl<Output: Send + 'static> WorkerBuilder<WithTimeout, Output> {
     ///
     /// A `WorkerBuilder<WithMaxJobs>` instance with the `WithMaxJobs` state.
     pub fn with_max_jobs_to_activate(
-        mut self,
+        self,
         max_jobs_to_activate: i32,
-    ) -> WorkerBuilder<WithMaxJobs, Output> {
-        self.max_jobs_to_activate = max_jobs_to_activate;
-        self.transition()
+    ) -> WorkerBuilder<WithMaxJobs> {
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: self.worker_callback,
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
 }
 
-impl<Output: Send + 'static> WorkerBuilder<WithMaxJobs, Output> {
+impl WorkerBuilder<WithMaxJobs> {
     /// Sets the maximum number of jobs that can be processed concurrently by the worker.
     ///
     /// # Arguments
@@ -442,16 +489,25 @@ impl<Output: Send + 'static> WorkerBuilder<WithMaxJobs, Output> {
     /// # Returns
     ///
     /// A `WorkerBuilder<WithConcurrency>` instance with the concurrency limit set.
-    pub fn with_concurrency_limit(
-        mut self,
-        concurrency_limit: u32,
-    ) -> WorkerBuilder<WithConcurrency, Output> {
-        self.concurrency_limit = concurrency_limit;
-        self.transition()
+    pub fn with_concurrency_limit(self, concurrency_limit: u32) -> WorkerBuilder<WithConcurrency> {
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit,
+            worker_callback: self.worker_callback,
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
 }
 
-impl<Output: Send + 'static> WorkerBuilder<WithConcurrency, Output> {
+impl WorkerBuilder<WithConcurrency> {
     /// Sets the job type for the worker.
     ///
     /// The job type is defined in the BPMN process, for example:
@@ -464,13 +520,25 @@ impl<Output: Send + 'static> WorkerBuilder<WithConcurrency, Output> {
     /// # Returns
     ///
     /// A `WorkerBuilder<WithJobType>` instance with the job type set.
-    pub fn with_job_type(mut self, job_type: String) -> WorkerBuilder<WithJobType, Output> {
-        self.job_type = job_type;
-        self.transition()
+    pub fn with_job_type(self, job_type: String) -> WorkerBuilder<WithJobType> {
+        WorkerBuilder {
+            client: self.client,
+            job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: self.worker_callback,
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
 }
 
-impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
+impl WorkerBuilder<WithJobType> {
     /// Sets the handler function for the worker.
     ///
     /// # Arguments
@@ -544,17 +612,39 @@ impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
     ///
     /// * `F` must implement `Fn(Client, ActivatedJob) -> R` and must be `Send`, `Sync`, and `'static`.
     /// * `R` must implement `Future<Output = Output>` and must be `Send` and `'static`.
-    pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler, Output>
+    pub fn with_handler<F, Fut>(self, handler: F) -> WorkerBuilder<WithHandler, F>
     where
-        F: Fn(Client, ActivatedJob) -> R + Send + Sync + 'static,
-        R: Future<Output = Output> + Send + 'static,
+        F: Fn(Client, ActivatedJob) -> Fut + Send + 'static,
+        Fut: Future + Send + 'static,
+        Fut::Output: WorkerOutputHandler + Send + 'static,
     {
-        self.worker_callback = Some(Arc::new(Box::new(move |client, job| {
-            Box::pin(handler(client, job)) as BoxFutureOf<Output>
-        })));
-        self.transition()
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: Some(Arc::new(handler)),
+            state: self.state,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
-
+    /*
+        pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler, Output>
+        where
+            F: Fn(Client, ActivatedJob) -> R + Send + Sync + 'static,
+            R: Future<Output = Output> + Send + 'static,
+        {
+            self.worker_callback = Some(Arc::new(Box::new(move |client, job| {
+                Box::pin(handler(client, job)) as BoxFutureOf<Output>
+            })));
+            self.transition()
+        }
+    */
     /// Sets the state that will be shared across all concurrent instances of the worker.
     ///
     /// # Arguments
@@ -572,6 +662,8 @@ impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
     /// # Constraints
     ///
     /// * `T` must be `Send`, `Sync`, and `'static`.
+    ///
+    /*
     pub fn with_state<T>(self, shared_state: Arc<SharedState<T>>) -> WorkerStateBuilder<T, Output>
     where
         T: Send + Sync + 'static,
@@ -580,16 +672,70 @@ impl<Output: Send + 'static> WorkerBuilder<WithJobType, Output> {
             builder: self,
             state: shared_state,
         }
+    } */
+    pub fn with_state<T>(self, state: Arc<SharedState<T>>) -> WorkerBuilder<WithState, (), T>
+    where
+        T: Send + Sync + 'static,
+    {
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: None,
+            state: Some(state),
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
     }
 }
 
-impl<Output: WorkerOutputHandler<Output> + Send + 'static> WorkerBuilder<WithHandler, Output> {
+impl<T> WorkerBuilder<WithState, (), T>
+where
+    T: Send + Sync + 'static,
+{
+    pub fn with_handler<F, Fut>(
+        self,
+        handler: F,
+    ) -> WorkerBuilder<WithHandler, (F, Arc<SharedState<T>>), T>
+    where
+        F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> Fut + Send + 'static,
+        Fut: Future + Send + 'static,
+        Fut::Output: WorkerOutputHandler + Send + 'static,
+    {
+        let state = self.state.unwrap();
+        WorkerBuilder {
+            client: self.client,
+            job_type: self.job_type,
+            worker_name: self.worker_name,
+            timeout: self.timeout,
+            max_jobs_to_activate: self.max_jobs_to_activate,
+            concurrency_limit: self.concurrency_limit,
+            worker_callback: Some(Arc::new((handler, state))),
+            state: None,
+            fetch_variable: self.fetch_variable,
+            request_timeout: self.request_timeout,
+            tenant_ids: self.tenant_ids,
+            _state: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<H, T> WorkerBuilder<WithHandler, H, T>
+where
+    H: JobHandler + Send + Sync + 'static,
+    T: Send + Sync + 'static,
+{
     /// Builds a `Worker` using the collected inputs.
     ///
     /// # Returns
     ///
     /// * `Worker` - The constructed Worker instance
-    pub fn build(self) -> Worker<Output> {
+    pub fn build(self) -> Worker<H> {
         let request = proto::ActivateJobsRequest {
             r#type: self.job_type,
             worker: self.worker_name,
@@ -687,91 +833,6 @@ impl<Output: WorkerOutputHandler<Output> + Send + 'static> WorkerBuilder<WithHan
     }
 }
 
-/// `WorkerStateBuilder` is a builder pattern struct for constructing a `Worker`
-/// instance that uses a handler consuming a shared state.
-/// This struct leverages the typestate pattern to ensure that all mandatory parameters
-/// are set before the `Worker` instance is built.
-///
-/// # Type Parameters
-///
-/// * `T` - The type of the shared state.
-pub struct WorkerStateBuilder<T, Output: Send + 'static> {
-    builder: WorkerBuilder<WithJobType, Output>,
-    state: Arc<SharedState<T>>,
-}
-
-impl<T, Output: Send + 'static> WorkerStateBuilder<T, Output> {
-    /// Sets the handler for the worker.
-    ///
-    /// This method allows you to specify a handler function that will be called
-    /// when a job is activated. The handler function takes a `Client`, an `ActivatedJob`,
-    /// and a shared state wrapped in an `Arc`. The handler must return a `Future` that
-    /// resolves to `()`.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `F` - The type of the handler function.
-    /// * `R` - The type of the `Future` returned by the handler function.
-    ///
-    /// # Parameters
-    ///
-    /// * `handler` - A function that will be called when a job is activated. It takes
-    ///   a `Client`, an `ActivatedJob`, and a shared state wrapped in an `Arc`, and returns
-    ///   a `Future` that resolves to `()`.
-    ///
-    /// # Returns
-    ///
-    /// Returns a `WorkerBuilder` with the handler set.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// struct ExampleSharedState {
-    ///     pub increment_me: u32,
-    /// }
-    /// ...
-    /// let state = Arc::new(SharedState(Mutex::new(ExampleSharedState {
-    ///     increment_me: 0,
-    /// })));
-    ///
-    /// async fn example_service(client: Client, job: ActivatedJob, state: Arc<Mutex<ExampleSharedState>>) {
-    ///     // Your job handling logic here
-    /// }
-    ///
-    /// client
-    ///    .worker()
-    ///    .with_job_timeout(Duration::from_secs(5 * 60))
-    ///    .with_request_timeout(Duration::from_secs(10))
-    ///    .with_max_jobs_to_activate(4)
-    ///    .with_concurrency_limit(2)
-    ///    .with_job_type(String::from("example-service"))
-    ///    .with_state(state)
-    ///    .with_handler(example_service)
-    ///    ...
-    /// ```
-    ///
-    /// # Constraints
-    ///
-    /// * `T` must implement `Send`, `Sync`, and have a static lifetime.
-    /// * `F` must be a function that takes a `Client`, an `ActivatedJob`, and an `Arc<SharedState<T>>`,
-    ///   and returns a `Future` that resolves to `()`. It must also implement `Send` and `Sync`, and have a static lifetime.
-    /// * `R` must be a `Future` that resolves to `()`, and must implement `Send` and have a static lifetime.
-    pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler, Output>
-    where
-        T: Send + Sync + 'static,
-        F: Fn(Client, ActivatedJob, Arc<SharedState<T>>) -> R + Send + Sync + 'static,
-        R: Future<Output = Output> + Send + 'static,
-    {
-        let handler_tuple = (
-            move |client: Client, job: ActivatedJob, state: Arc<SharedState<T>>| {
-                Box::pin(handler(client, job, state)) as BoxFutureOf<Output>
-            },
-            self.state.clone(),
-        );
-        self.builder.worker_callback = Some(Arc::new(Box::new(handler_tuple)));
-        self.builder.transition()
-    }
-}
-
 enum PollingMessage {
     FetchJobs,
     JobsFetched(u32),
@@ -865,17 +926,20 @@ impl WorkProducer {
     }
 }
 
-struct WorkConsumer<Output> {
+struct WorkConsumer<H>
+where
+    H: JobHandler + Send + Sync + 'static,
+{
     client: Client,
     job_rx: Receiver<ActivatedJob>,
     poll_tx: Sender<PollingMessage>,
     semaphore: Arc<Semaphore>,
-    worker_callback: Arc<Box<dyn JobHandler<Output>>>,
+    worker_callback: Arc<H>,
 }
 
-impl<Output> WorkConsumer<Output>
+impl<H> WorkConsumer<H>
 where
-    Output: WorkerOutputHandler<Output> + Send + 'static,
+    H: JobHandler + Send + Sync + 'static,
 {
     async fn run(&mut self) {
         while let Some(job) = self.job_rx.recv().await {
@@ -885,10 +949,7 @@ where
             let callback = self.worker_callback.clone();
 
             tokio::spawn(async move {
-                let result = callback.execute(client.clone(), job.clone()).await;
-
-                Output::handle_result(client, job, result).await;
-
+                callback.execute(client.clone(), job.clone()).await;
                 let _ = poll_tx.send(PollingMessage::JobFinished).await;
                 drop(permit);
             });
@@ -950,19 +1011,25 @@ where
 /// - Job activation timeouts
 /// - Network errors during polling
 /// - Job processing failures
-pub struct Worker<Output: Send + 'static> {
+pub struct Worker<H>
+where
+    H: JobHandler + Send + Sync + 'static,
+{
     poller: WorkProducer,
-    dispatcher: WorkConsumer<Output>,
+    dispatcher: WorkConsumer<H>,
 }
 
-impl<Output: WorkerOutputHandler<Output> + Send + 'static> Worker<Output> {
+impl<H> Worker<H>
+where
+    H: JobHandler + Send + Sync + 'static,
+{
     fn new(
         client: Client,
         request: proto::ActivateJobsRequest,
         request_timeout: Duration,
         concurrency_limit: u32,
-        callback: Arc<Box<dyn JobHandler<Output>>>,
-    ) -> Worker<Output> {
+        callback: Arc<H>,
+    ) -> Worker<H> {
         let (job_tx, job_rx) = mpsc::channel(32);
         let (poll_tx, poll_rx) = mpsc::channel(32);
         let max_jobs_to_activate = request.max_jobs_to_activate as u32;
