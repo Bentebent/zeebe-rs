@@ -16,13 +16,21 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ### Security
 
-## 0.2.1 - 2024-02-01
+## 0.3.0 - 2025-02-3
+
+### Changed
+
+- Refactored worker implementation to use dynamic dispatch instead.
+- Worker builder now exposes less generics
+- WorkerOutputHandler uses a trait associated type instead of generics
+
+## 0.2.1 - 2025-02-01
 
 ### Changed
 
 - Exposed some missing Worker constructs to make sure they are documented in docs.rs
 
-## 0.2.0 - 2024-01-28
+## 0.2.0 - 2025-01-28
 
 ### Added
 
@@ -37,7 +45,7 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 - Updated documentation across solution
 - Updated `pizza` example to reflect new worker functionality
 
-## 0.1.0 - 2024-01-27
+## 0.1.0 - 2025-01-27
 
 ### Added
 
