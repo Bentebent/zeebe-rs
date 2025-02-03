@@ -90,11 +90,16 @@ impl<T> DerefMut for SharedState<T> {
 /// # Examples
 ///
 /// ```ignore
-/// impl WorkerOutputHandler<()> for () {
-///     fn handle_result(client: Client, job: ActivatedJob, result: ()) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-///         Box::pin(async {})
+/// impl WorkerOutputHandler for MyStruct {
+///     fn handle_result(self, client: Client, job: ActivatedJob) ->  impl Future<Output = ()> + Send + 'static {
+///         if let Ok(req) = client
+///                 .complete_job()
+///                 .with_job_key(job.key())
+///                 .with_variables(self)
+///                 {
+///                     let _ = req.send().await;
+///                 }
 ///     }
-/// }
 /// ```
 pub trait WorkerOutputHandler {
     fn handle_result(
@@ -200,23 +205,6 @@ where
     }
 }
 
-/// A trait defining the interface for job handling functions.
-///
-/// This trait is implemented automatically for functions that match the required
-/// signature, allowing them to be used as job handlers in the worker.
-///
-/// # Type Parameters
-///
-/// * `Output` - The type that the handler returns when processing is complete
-///
-/// # Examples
-///
-/// ```ignore
-/// async fn my_handler(client: Client, job: ActivatedJob) -> Result<(), WorkerError<()>> {
-///     // Handle job processing
-///     Ok(())
-/// }
-/// ```
 pub trait JobHandler {
     type Output: WorkerOutputHandler + Send + 'static;
     fn execute(&self, client: Client, job: ActivatedJob) -> impl Future<Output = ()> + Send;
@@ -294,8 +282,7 @@ impl WorkerBuilderState for WithHandler {}
 ///
 /// # Type Parameters
 ///
-/// * `T` - The current state of the builder (enforces configuration order)
-/// * `Output` - The type returned by the job handler
+/// * `S` - The current state of the builder (enforces configuration order)
 ///
 /// # Examples
 /// ```ignore
@@ -393,29 +380,6 @@ impl WorkerBuilder<Initial> {
     }
 }
 
-/*
-impl<T: WorkerBuilderState, Output: Send + 'static> WorkerBuilder<T, Output> {
-    fn transition<NewState: WorkerBuilderState>(self) -> WorkerBuilder<NewState, Output> {
-        WorkerBuilder {
-            client: self.client,
-            job_type: self.job_type,
-            worker_name: self.worker_name,
-            timeout: self.timeout,
-            max_jobs_to_activate: self.max_jobs_to_activate,
-            concurrency_limit: self.concurrency_limit,
-            worker_callback: self.worker_callback,
-            fetch_variable: self.fetch_variable,
-            request_timeout: self.request_timeout,
-            tenant_ids: self.tenant_ids,
-            _state: std::marker::PhantomData,
-        }
-    }
-}
-*/
-
-//impl<Output: Send + 'static> WorkerBuilder<Initial, Output> {
-//(())}
-
 impl WorkerBuilder<WithRequestTimeout> {
     /// Sets the job timeout for the worker.
     ///
@@ -429,7 +393,7 @@ impl WorkerBuilder<WithRequestTimeout> {
     ///
     /// # Returns
     ///
-    /// A `WorkerBuilder<WithTimeout>` instance with the job timeout configured.
+    /// A `WorkerBuilder<WithJobTimeout>` instance with the job timeout configured.
     pub fn with_job_timeout(self, timeout: Duration) -> WorkerBuilder<WithJobTimeout> {
         WorkerBuilder {
             client: self.client,
@@ -606,12 +570,12 @@ impl WorkerBuilder<WithJobType> {
     /// # Type Parameters
     ///
     /// * `F` - The type of the handler function.
-    /// * `R` - The type of the `Future` returned by the handler function.
+    /// * `Fut` - The return of F
+    /// * `Fut::Output` - Fut return value that must implement WorkerOutputHandler
     ///
     /// # Constraints
     ///
-    /// * `F` must implement `Fn(Client, ActivatedJob) -> R` and must be `Send`, `Sync`, and `'static`.
-    /// * `R` must implement `Future<Output = Output>` and must be `Send` and `'static`.
+    /// * `F` must implement `Fn(Client, ActivatedJob) -> Fut` and must be `Send` and `'static`.
     pub fn with_handler<F, Fut>(self, handler: F) -> WorkerBuilder<WithHandler, F>
     where
         F: Fn(Client, ActivatedJob) -> Fut + Send + 'static,
@@ -633,18 +597,7 @@ impl WorkerBuilder<WithJobType> {
             _state: std::marker::PhantomData,
         }
     }
-    /*
-        pub fn with_handler<F, R>(mut self, handler: F) -> WorkerBuilder<WithHandler, Output>
-        where
-            F: Fn(Client, ActivatedJob) -> R + Send + Sync + 'static,
-            R: Future<Output = Output> + Send + 'static,
-        {
-            self.worker_callback = Some(Arc::new(Box::new(move |client, job| {
-                Box::pin(handler(client, job)) as BoxFutureOf<Output>
-            })));
-            self.transition()
-        }
-    */
+
     /// Sets the state that will be shared across all concurrent instances of the worker.
     ///
     /// # Arguments
@@ -663,16 +616,6 @@ impl WorkerBuilder<WithJobType> {
     ///
     /// * `T` must be `Send`, `Sync`, and `'static`.
     ///
-    /*
-    pub fn with_state<T>(self, shared_state: Arc<SharedState<T>>) -> WorkerStateBuilder<T, Output>
-    where
-        T: Send + Sync + 'static,
-    {
-        WorkerStateBuilder {
-            builder: self,
-            state: shared_state,
-        }
-    } */
     pub fn with_state<T>(self, state: Arc<SharedState<T>>) -> WorkerBuilder<WithState, (), T>
     where
         T: Send + Sync + 'static,
