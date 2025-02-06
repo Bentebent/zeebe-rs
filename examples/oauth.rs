@@ -9,7 +9,6 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("RUST_BACKTRACE", "1");
-
     let client = zeebe_rs::Client::builder()
         .with_address("http://localhost", 26500)
         .with_oauth(
@@ -20,6 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
             String::from("zeebe-api"),
             Duration::from_secs(30),
+            None,
         )
         .build()
         .await?;

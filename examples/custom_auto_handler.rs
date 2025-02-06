@@ -55,6 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
             String::from("zeebe-api"),
             Duration::from_secs(30),
+            None,
         )
         .build()
         .await?;

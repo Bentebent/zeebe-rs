@@ -32,7 +32,7 @@ pub use job::{
     update_retries::{UpdateJobRetriesRequest, UpdateJobRetriesResponse},
     update_timeout::{UpdateJobTimeoutRequest, UpdateJobTimeoutResponse},
 };
-pub use oauth::OAuthError;
+pub use oauth::{AuthType, OAuthConfig, OAuthError};
 pub use process_instance::{
     cancel::{CancelProcessInstanceRequest, CancelProcessInstanceResponse},
     create::{
