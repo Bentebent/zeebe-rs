@@ -109,7 +109,8 @@ impl OAuthProvider {
         let client = BasicClient::new(ClientId::new(config.client_id))
             .set_client_secret(ClientSecret::new(config.client_secret))
             .set_auth_uri(AuthUrl::new(config.auth_url.clone()).unwrap())
-            .set_token_uri(TokenUrl::new(config.auth_url.clone()).unwrap());
+            .set_token_uri(TokenUrl::new(config.auth_url.clone()).unwrap())
+            .set_auth_type(oauth2::AuthType::RequestBody);
 
         let reqwest_client = reqwest::ClientBuilder::new()
             .redirect(reqwest::redirect::Policy::none())
