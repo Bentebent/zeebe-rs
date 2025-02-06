@@ -106,6 +106,8 @@ pub enum ClientBuilderError {
 
 #[derive(Default, Clone)]
 pub struct Initial;
+
+#[derive(Default, Clone)]
 pub struct WithAddress;
 
 pub trait ClientBuilderState {}
@@ -205,6 +207,17 @@ impl ClientBuilder<WithAddress> {
             audience,
         ));
         self.auth_timeout = Some(auth_timeout);
+
+        self
+    }
+
+    /// Configures TLS for the client root certificates required for Camunda Cloud
+    ///
+    /// # Returns
+    ///
+    /// A `ClientBuilder<WithAddress>` instance with tls configuration set.
+    pub fn with_cloud_tls(mut self) -> Self {
+        self.tls = Some(ClientTlsConfig::new().with_enabled_roots());
         self
     }
 
