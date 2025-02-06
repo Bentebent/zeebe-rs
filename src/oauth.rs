@@ -17,11 +17,27 @@ const OAUTH_REFRESH_INTERVAL_SEC: u64 = 10;
 const OAUTH_REFRESH_MARGIN_SEC: u64 = 15;
 
 #[derive(Debug, Clone)]
+pub enum AuthType {
+    RequestBody,
+    BasicAuth,
+}
+
+impl From<AuthType> for oauth2::AuthType {
+    fn from(value: AuthType) -> oauth2::AuthType {
+        match value {
+            AuthType::RequestBody => oauth2::AuthType::RequestBody,
+            AuthType::BasicAuth => oauth2::AuthType::BasicAuth,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct OAuthConfig {
     pub client_id: String,
     pub client_secret: String,
     pub auth_url: String,
     pub audience: String,
+    pub auth_type: AuthType,
 }
 
 impl OAuthConfig {
@@ -30,12 +46,19 @@ impl OAuthConfig {
         client_secret: String,
         auth_url: String,
         audience: String,
+        auth_type: Option<AuthType>,
     ) -> Self {
+        let mut auth_type = auth_type;
+        if auth_type.is_none() {
+            auth_type = Some(AuthType::RequestBody)
+        }
+
         OAuthConfig {
             client_id,
             client_secret,
             auth_url,
             audience,
+            auth_type: auth_type.unwrap(),
         }
     }
 }
@@ -110,7 +133,7 @@ impl OAuthProvider {
             .set_client_secret(ClientSecret::new(config.client_secret))
             .set_auth_uri(AuthUrl::new(config.auth_url.clone()).unwrap())
             .set_token_uri(TokenUrl::new(config.auth_url.clone()).unwrap())
-            .set_auth_type(oauth2::AuthType::RequestBody);
+            .set_auth_type(config.auth_type.into());
 
         let reqwest_client = reqwest::ClientBuilder::new()
             .redirect(reqwest::redirect::Policy::none())

@@ -16,6 +16,13 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ### Security
 
+## 0.3.1 - 2025-02-06
+
+### Added
+
+- Added support for native TLS certs for Camunda Cloud auth
+- Added support for configuring OAuth 2 credential auth type
+
 ## 0.3.0 - 2025-02-3
 
 ### Changed

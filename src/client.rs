@@ -6,7 +6,7 @@ use crate::{
         update_retries::UpdateJobRetriesRequest, update_timeout::UpdateJobTimeoutRequest,
     },
     message::PublishMessageRequest,
-    oauth::{OAuthConfig, OAuthInterceptor},
+    oauth::{AuthType, OAuthConfig, OAuthInterceptor},
     process_instance::{
         cancel::CancelProcessInstanceRequest, create::CreateProcessInstanceRequest,
         migrate::MigrateProcessInstanceRequest, modify::ModifyProcessInstanceRequest,
@@ -188,6 +188,7 @@ impl ClientBuilder<WithAddress> {
     /// * `auth_url` - The URL for the OAuth authentication server.
     /// * `audience` - The audience for the OAuth token.
     /// * `auth_timeout` - The timeout duration for the OAuth authentication process.
+    /// * `auth_type` - If OAuth credentials should use request body or basic auth, defaults to request body
     ///
     /// # Returns
     ///
@@ -199,12 +200,14 @@ impl ClientBuilder<WithAddress> {
         auth_url: String,
         audience: String,
         auth_timeout: Duration,
+        auth_type: Option<AuthType>,
     ) -> Self {
         self.oauth_config = Some(OAuthConfig::new(
             client_id,
             client_secret,
             auth_url,
             audience,
+            auth_type,
         ));
         self.auth_timeout = Some(auth_timeout);
 
