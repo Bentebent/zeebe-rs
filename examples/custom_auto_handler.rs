@@ -41,7 +41,7 @@ async fn always_fail(_client: Client, _job: ActivatedJob) -> MyResult<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    std::env::set_var("RUST_BACKTRACE", "1");
+    unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
 
     // Default configuration using Camunda's docker compose
     // https://github.com/camunda/camunda-platform/blob/5dc74fe71667e18fbb5c8d4694068d662d83ad00/README.md
