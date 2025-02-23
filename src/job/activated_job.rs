@@ -1,4 +1,4 @@
-use crate::{proto, ClientError};
+use crate::{ClientError, proto};
 use serde::de::DeserializeOwned;
 
 /// Represents an activated job

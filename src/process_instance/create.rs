@@ -1,8 +1,8 @@
-use crate::proto;
 use crate::Client;
 use crate::ClientError;
-use serde::de::DeserializeOwned;
+use crate::proto;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 const LATEST_VERSION: i32 = -1;
 

@@ -1,6 +1,6 @@
 use oauth2::{
-    basic::BasicClient, reqwest, AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet,
-    TokenResponse, TokenUrl,
+    AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet, TokenResponse, TokenUrl,
+    basic::BasicClient, reqwest,
 };
 use std::{
     sync::{Arc, Mutex},
@@ -11,7 +11,7 @@ use tokio::{
     sync::Notify,
     time::{error::Elapsed, timeout},
 };
-use tonic::{metadata::MetadataValue, service::Interceptor, Status};
+use tonic::{Status, metadata::MetadataValue, service::Interceptor};
 
 const OAUTH_REFRESH_INTERVAL_SEC: u64 = 10;
 const OAUTH_REFRESH_MARGIN_SEC: u64 = 15;

@@ -1,6 +1,6 @@
-use crate::proto;
 use crate::Client;
 use crate::ClientError;
+use crate::proto;
 
 #[derive(Debug, Clone)]
 pub struct Initial;
