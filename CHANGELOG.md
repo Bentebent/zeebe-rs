@@ -16,6 +16,12 @@ All notable changes to zeebe-rs will be documented in this file. The format is b
 
 ### Security
 
+## 0.4.0 - 2025-02-23
+
+### Changed
+
+- Bumped edition to 2024
+
 ## 0.3.1 - 2025-02-06
 
 ### Added
