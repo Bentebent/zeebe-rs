@@ -15,7 +15,7 @@ struct HelloWorld {
 //Audience: zeebe-api
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    std::env::set_var("RUST_BACKTRACE", "1");
+    unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
 
     let client = zeebe_rs::Client::builder()
         .with_address("http://localhost", 26500)
