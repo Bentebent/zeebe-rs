@@ -71,7 +71,7 @@ async fn place_order(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
+    std::env::set_var("RUST_BACKTRACE", "1");
 
     // Default configuration using Camunda's docker compose
     // https://github.com/camunda/camunda-platform/blob/5dc74fe71667e18fbb5c8d4694068d662d83ad00/README.md
