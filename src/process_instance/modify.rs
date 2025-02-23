@@ -1,4 +1,4 @@
-use crate::{proto, Client, ClientError};
+use crate::{Client, ClientError, proto};
 use serde::Serialize;
 
 #[derive(Debug, Clone)]

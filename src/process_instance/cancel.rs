@@ -1,6 +1,6 @@
-use crate::proto;
 use crate::Client;
 use crate::ClientError;
+use crate::proto;
 
 /// Initial state for the CancelProcessInstanceRequest builder pattern
 #[derive(Debug, Clone)]

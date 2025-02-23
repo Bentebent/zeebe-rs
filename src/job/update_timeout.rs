@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{proto, Client, ClientError};
+use crate::{Client, ClientError, proto};
 
 pub struct Initial;
 pub struct WithKey;

@@ -1,4 +1,4 @@
-use crate::{client, proto, ActivatedJob, Client};
+use crate::{ActivatedJob, Client, client, proto};
 use serde::Serialize;
 use std::{
     future::Future,
@@ -9,10 +9,10 @@ use std::{
 use thiserror::Error;
 use tokio::{
     sync::{
-        mpsc::{self, Receiver, Sender},
         Semaphore,
+        mpsc::{self, Receiver, Sender},
     },
-    time::{interval, timeout, Interval},
+    time::{Interval, interval, timeout},
 };
 
 /// An enum representing possible errors that can occur during job processing.

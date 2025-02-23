@@ -1,4 +1,4 @@
-use crate::{client::Client, proto, ClientError};
+use crate::{ClientError, client::Client, proto};
 
 /// Request to obtain the current cluster topology.
 ///

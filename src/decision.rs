@@ -1,5 +1,5 @@
-use crate::{proto, Client, ClientError};
-use serde::{de::DeserializeOwned, Serialize};
+use crate::{Client, ClientError, proto};
+use serde::{Serialize, de::DeserializeOwned};
 
 pub struct Initial;
 pub struct WithKey;
