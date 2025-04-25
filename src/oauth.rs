@@ -12,6 +12,7 @@ use tokio::{
     time::{error::Elapsed, timeout},
 };
 use tonic::{Status, metadata::MetadataValue, service::Interceptor};
+use tracing::error;
 
 const OAUTH_REFRESH_INTERVAL_SEC: u64 = 10;
 const OAUTH_REFRESH_MARGIN_SEC: u64 = 15;
@@ -181,7 +182,9 @@ impl OAuthProvider {
             let mut interval = tokio::time::interval(refresh_interval);
             loop {
                 interval.tick().await;
-                let _ = self.refresh_token().await;
+                if let Err(error) = self.refresh_token().await {
+                    error!("Failed to refresh OAuth token: {}", error)
+                }
             }
         });
     }
