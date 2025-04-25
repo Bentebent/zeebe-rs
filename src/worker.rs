@@ -14,6 +14,7 @@ use tokio::{
     },
     time::{Interval, interval, timeout},
 };
+use tracing::{debug, error, info};
 
 /// An enum representing possible errors that can occur during job processing.
 ///
@@ -133,6 +134,7 @@ where
                     .with_variables(value)
                 {
                     let _ = req.send().await;
+                    info!("Completed job {}", job.key());
                 }
             }
             Err(error) => match error {
@@ -141,9 +143,10 @@ where
                         .fail_job()
                         .with_job_key(job.key())
                         .with_retries(job.retries() - 1)
-                        .with_error_message(error_message)
+                        .with_error_message(error_message.clone())
                         .send()
                         .await;
+                    error!("Failed job {} with error {}", job.key(), error_message);
                 }
                 WorkerError::FailJobWithData {
                     error_message,
@@ -153,13 +156,13 @@ where
                         .fail_job()
                         .with_job_key(job.key())
                         .with_retries(job.retries() - 1)
-                        .with_error_message(error_message)
+                        .with_error_message(error_message.clone())
                         .with_variables(data)
                     {
                         let _ = req.send().await;
+                        error!("Failed job {} with error {}", job.key(), error_message);
                     }
                 }
-
                 WorkerError::ThrowError {
                     error_code,
                     error_message,
@@ -167,12 +170,19 @@ where
                     let mut builder = client
                         .throw_error()
                         .with_job_key(job.key())
-                        .with_error_code(error_code);
-                    if let Some(error_message) = error_message {
+                        .with_error_code(error_code.clone());
+
+                    if let Some(error_message) = error_message.clone() {
                         builder = builder.with_error_message(error_message);
                     }
 
                     let _ = builder.send().await;
+                    error!(
+                        "Job {} threw error {} {}",
+                        error_code,
+                        error_message.unwrap_or(String::from("")),
+                        job.key(),
+                    );
                 }
                 WorkerError::ThrowErrorWithData {
                     error_code,
@@ -182,13 +192,19 @@ where
                     if let Ok(mut req) = client
                         .throw_error()
                         .with_job_key(job.key())
-                        .with_error_code(error_code)
+                        .with_error_code(error_code.clone())
                         .with_variables(data)
                     {
-                        if let Some(error_message) = error_message {
+                        if let Some(error_message) = error_message.clone() {
                             req = req.with_error_message(error_message);
                         }
                         let _ = req.send().await;
+                        error!(
+                            "Job {} threw error {} {}",
+                            error_code,
+                            error_message.unwrap_or(String::from("")),
+                            job.key(),
+                        );
                     }
                 }
                 WorkerError::ClientError(client_error) => {
@@ -199,6 +215,8 @@ where
                         .with_error_message(client_error.to_string())
                         .send()
                         .await;
+
+                    error!("Failed job {} with error {}", job.key(), client_error);
                 }
             },
         }
@@ -811,9 +829,14 @@ impl WorkProducer {
                     .gateway_client
                     .activate_jobs(tonic::Request::new(request))
                     .await
-                    .map(|response| response.into_inner());
+                    .map(|response| {
+                        debug!("Response {:?}", response);
+                        response.into_inner()
+                    });
 
                 let mut jobs_fetched = 0;
+                debug!("Res {:?}", res);
+
                 if let Ok(mut stream) = res {
                     while let Ok(Some(activate_job_response)) = stream.message().await {
                         jobs_fetched += activate_job_response.jobs.len() as u32;
@@ -829,7 +852,9 @@ impl WorkProducer {
                     .await;
             })
             .await
-            {};
+            {
+                error!("{}", _err);
+            };
 
             let _ = poll_tx.send(PollingMessage::FetchJobsComplete).await;
         });
