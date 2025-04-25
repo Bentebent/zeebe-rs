@@ -852,9 +852,7 @@ impl WorkProducer {
                     .await;
             })
             .await
-            {
-                error!("{}", _err);
-            };
+            {};
 
             let _ = poll_tx.send(PollingMessage::FetchJobsComplete).await;
         });
